@@ -2,8 +2,14 @@ import type { Post, IndexLog } from './types';
 import seedPostsData from '../data/seed-posts.json';
 import { sanitizePost } from './sanitize';
 
-// In-memory runtime cache for ultra-fast response
+// In-memory runtime RAM cache for ultra-fast 0ms response & 0 D1 reads
 let postsCache: Post[] = (seedPostsData as Post[]).map(sanitizePost);
+let lastD1FetchTime = 0;
+const D1_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes in-memory cache
+
+// Single-post memory cache to prevent repeated full-content D1 reads
+const singlePostCache = new Map<string, { post: Post; time: number }>();
+const SINGLE_POST_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 export const CATEGORIES = [
   { slug: 'movies', label: 'Movies' },
@@ -22,7 +28,7 @@ function rowToPost(row: any): Post {
     title: row.title,
     subtitle: row.subtitle || '',
     excerpt: row.excerpt || '',
-    content: row.content,
+    content: row.content || row.excerpt || '',
     category: row.category,
     categoryLabel: row.category_label || row.category.charAt(0).toUpperCase() + row.category.slice(1),
     badge: row.badge,
@@ -47,13 +53,36 @@ function rowToPost(row: any): Post {
   });
 }
 
+/**
+ * Returns latest posts with RAM caching + lightweight projection.
+ * Omits heavy 'content' column to minimize D1 row bytes read.
+ */
 export async function getAllPosts(d1?: any): Promise<Post[]> {
+  const now = Date.now();
+
+  // Tier 1: In-Memory RAM Cache (0ms, 0 D1 reads)
+  if (postsCache.length > 0 && (now - lastD1FetchTime < D1_CACHE_TTL_MS)) {
+    return postsCache;
+  }
+
+  // Tier 2: Cloudflare D1 Query with projection & LIMIT 70
   if (d1) {
     try {
-      const stmt = d1.prepare('SELECT * FROM posts ORDER BY published_at DESC');
+      // Lightweight query: do not fetch heavy 'content' column for listing cards
+      const stmt = d1.prepare(`
+        SELECT id, slug, title, subtitle, excerpt, category, category_label, badge,
+               featured_image, image_caption, image_credit, author_name, author_role, author_slug,
+               author_avatar, published_at, updated_at, reading_time_minutes, source_url, source_name,
+               indexed_in_google, google_indexed_at, tags
+        FROM posts
+        ORDER BY published_at DESC
+        LIMIT 70
+      `);
       const { results } = await stmt.all();
       if (results && results.length > 0) {
-        return results.map(rowToPost);
+        postsCache = results.map(rowToPost);
+        lastD1FetchTime = now;
+        return postsCache;
       }
     } catch (e) {
       console.warn('D1 read failed, falling back to cache:', e);
@@ -77,7 +106,6 @@ export async function getTrendingPosts(limit = 6, d1?: any): Promise<Post[]> {
 
 /**
  * Returns latest 3 posts strictly for each category.
- * User requirement: "sabhi categories ke latest 3 post hi rakhana"
  */
 export async function getPostsByCategory(categorySlug: string, limit = 3, d1?: any): Promise<Post[]> {
   const all = await getAllPosts(d1);
@@ -104,13 +132,25 @@ export async function getAllCategoryGroups(postsPerCategory = 3, d1?: any): Prom
   });
 }
 
+/**
+ * Returns a single complete article with full longform content.
+ * Cached in RAM for 10 minutes to eliminate repetitive D1 reads.
+ */
 export async function getPostBySlug(slug: string, d1?: any): Promise<Post | undefined> {
+  const now = Date.now();
+  const cached = singlePostCache.get(slug);
+  if (cached && (now - cached.time < SINGLE_POST_TTL_MS) && cached.post.content) {
+    return cached.post;
+  }
+
   if (d1) {
     try {
       const stmt = d1.prepare('SELECT * FROM posts WHERE slug = ? LIMIT 1').bind(slug);
       const row = await stmt.first();
       if (row) {
-        return rowToPost(row);
+        const post = rowToPost(row);
+        singlePostCache.set(slug, { post, time: now });
+        return post;
       }
     } catch (e) {
       console.warn('D1 get by slug failed, checking cache:', e);
@@ -118,7 +158,11 @@ export async function getPostBySlug(slug: string, d1?: any): Promise<Post | unde
   }
 
   const all = await getAllPosts();
-  return all.find((p) => p.slug === slug);
+  const found = all.find((p) => p.slug === slug);
+  if (found) {
+    singlePostCache.set(slug, { post: found, time: now });
+  }
+  return found;
 }
 
 export async function getRelatedPosts(category: string, currentSlug: string, limit = 3, d1?: any): Promise<Post[]> {
@@ -130,6 +174,11 @@ export async function getRelatedPosts(category: string, currentSlug: string, lim
 
 let indexLogsCache: IndexLog[] = [];
 
+/**
+ * Inserts or updates a post in D1.
+ * Enforces automatic storage pruning (keeps at most 1,500 latest posts)
+ * so Cloudflare D1 free storage quota (500MB) is NEVER exceeded.
+ */
 export async function addPost(post: Post, d1?: any): Promise<{ success: boolean; created: boolean; post: Post }> {
   const sanitized = sanitizePost(post);
 
@@ -170,12 +219,24 @@ export async function addPost(post: Post, d1?: any): Promise<{ success: boolean;
         sanitized.googleIndexedAt || sanitized.publishedAt,
         tagsStr
       ).run();
+
+      // Periodic storage guard: keep at most 1,500 latest posts (~15 MB) to never exceed 500 MB
+      try {
+        await d1.prepare(`
+          DELETE FROM posts 
+          WHERE id NOT IN (SELECT id FROM posts ORDER BY published_at DESC LIMIT 1500)
+        `).run();
+      } catch {
+        // ignore pruning errors
+      }
     } catch (d1Err) {
       console.error('Failed to write post to Cloudflare D1:', d1Err);
     }
   }
 
-  // Update in-memory runtime cache
+  // Update in-memory runtime cache immediately
+  singlePostCache.set(sanitized.slug, { post: sanitized, time: Date.now() });
+
   const existingIdx = postsCache.findIndex((p) => p.slug === sanitized.slug || (sanitized.sourceUrl && p.sourceUrl === sanitized.sourceUrl));
   if (existingIdx !== -1) {
     postsCache[existingIdx] = sanitized;
@@ -183,6 +244,7 @@ export async function addPost(post: Post, d1?: any): Promise<{ success: boolean;
   }
 
   postsCache.unshift(sanitized);
+  lastD1FetchTime = Date.now(); // Cache is fresh!
   return { success: true, created: true, post: sanitized };
 }
 

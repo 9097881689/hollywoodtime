@@ -25,6 +25,9 @@ const authorProfile = (post.author.slug && getAuthorBySlug(post.author.slug)) ||
 // Get exactly latest 3 related posts from same category
 const relatedPosts = await getRelatedPosts(post.category, post.slug, 3, db);
 
+// Cloudflare Edge CDN Caching: 30 minutes edge cache + background revalidation
+Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800, stale-while-revalidate=86400');
+
 const formattedDate = new Intl.DateTimeFormat('en-US', {
   month: 'long',
   day: 'numeric',

@@ -64,14 +64,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
             rewrittenPost.googleIndexedAt = new Date().toISOString();
           }
 
-          // Limit batch per sync run to prevent timeouts
-          if (newlyCreatedPosts.length >= 6) break;
+          // Limit batch per 5-min sync run to 2 posts to protect D1 free quota and Google quota
+          if (newlyCreatedPosts.length >= 2) break;
         }
       } catch (srcErr) {
         console.error(`Error processing feed source ${source.name}:`, srcErr);
       }
 
-      if (newlyCreatedPosts.length >= 6) break;
+      if (newlyCreatedPosts.length >= 2) break;
     }
 
     return new Response(

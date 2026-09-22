@@ -18,6 +18,9 @@ const db = (Astro.locals as any)?.runtime?.env?.DB;
 const posts = await getPostsByCategory(currentCatObj.slug, 12, db);
 const leadPost = posts[0];
 const remainingPosts = posts.slice(1);
+
+// Cloudflare Edge CDN Caching
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400');
 ---
 
 <Layout
