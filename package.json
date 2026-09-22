@@ -1,0 +1,24 @@
+{
+  "name": "hollywood-time",
+  "type": "module",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "astro dev --host 0.0.0.0 --port 4321",
+    "start": "astro dev --host 0.0.0.0 --port 4321",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "sync-news": "node scripts/sync-feeds.js"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^11.1.0",
+    "@astrojs/tailwind": "^5.1.4",
+    "astro": "^4.16.18",
+    "fast-xml-parser": "^4.5.0",
+    "lucide": "^0.469.0",
+    "tailwindcss": "^3.4.17"
+  },
+  "devDependencies": {
+    "wrangler": "^3.101.0"
+  }
+}

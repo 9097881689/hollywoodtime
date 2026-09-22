@@ -1,0 +1,17 @@
+---
+import type { Post } from '../lib/types';
+import { generateNewsArticleSchema, generateOrganizationSchema } from '../lib/seo';
+
+interface Props {
+  post?: Post;
+}
+
+const { post } = Astro.props;
+const siteUrl = 'https://www.hollywoodtime.com';
+
+const schema = post
+  ? generateNewsArticleSchema(post, siteUrl)
+  : generateOrganizationSchema(siteUrl);
+---
+
+<script type="application/ld+json" set:html={JSON.stringify(schema, null, 2)} />

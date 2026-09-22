@@ -1,0 +1,107 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import ArticleCard from '../../components/ArticleCard.astro';
+import VerifiedBadge from '../../components/VerifiedBadge.astro';
+import { getAuthorBySlug, getAllAuthors } from '../../lib/authors';
+import { getAllPosts } from '../../lib/db';
+
+const { slug } = Astro.params;
+
+if (!slug) {
+  return Astro.redirect('/');
+}
+
+const author = getAuthorBySlug(slug);
+
+if (!author) {
+  return Astro.redirect('/');
+}
+
+const allPosts = await getAllPosts();
+// Filter articles by this author's name or assign relevant category articles
+const authorPosts = allPosts.filter(
+  (p) =>
+    p.author.name.toLowerCase() === author.name.toLowerCase() ||
+    author.primaryCategories.includes(p.category.toLowerCase())
+);
+---
+
+<Layout
+  title={`${author.name} (${author.role}) | Hollywood Time`}
+  description={author.bio}
+>
+  <div class="max-w-5xl mx-auto py-8">
+    <!-- Author Profile Header -->
+    <div class="bg-zinc-50 border border-zinc-200 p-6 sm:p-8 rounded-sm mb-12 shadow-sm">
+      <div class="flex flex-col md:flex-row items-start md:items-center gap-6 sm:gap-8">
+        <!-- Avatar -->
+        <div class="relative">
+          <img
+            src={author.avatar}
+            alt={author.name}
+            class="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-white shadow-md"
+          />
+          <span class="absolute bottom-1 right-1 bg-blue-600 text-white rounded-full p-1.5 shadow-sm" title="Verified Journalist">
+            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+          </span>
+        </div>
+
+        <!-- Info -->
+        <div class="flex-1 space-y-3">
+          <div class="flex flex-wrap items-center gap-3">
+            <h1 class="text-2xl sm:text-4xl font-serif font-bold text-zinc-950">
+              {author.name}
+            </h1>
+            <VerifiedBadge size="md" />
+          </div>
+
+          <p class="text-sm font-bold uppercase tracking-wider text-red-600">
+            {author.role} • <span class="text-zinc-500 font-normal">{author.location}</span>
+          </p>
+
+          <p class="text-sm text-zinc-700 font-sans leading-relaxed">
+            {author.bio}
+          </p>
+
+          <!-- Beats -->
+          <div class="flex flex-wrap items-center gap-2 pt-1">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mr-1">Beats:</span>
+            {author.beats.map((beat) => (
+              <span class="px-2 py-0.5 rounded text-[11px] bg-white border border-zinc-200 text-zinc-700 font-medium">
+                {beat}
+              </span>
+            ))}
+          </div>
+
+          <!-- Credentials -->
+          <div class="pt-2 border-t border-zinc-200 flex flex-wrap items-center gap-4 text-xs text-zinc-500">
+            {author.credentials.map((cred) => (
+              <span class="flex items-center gap-1">
+                <span class="text-red-600">✓</span> {cred}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stories By This Reporter -->
+    <div>
+      <div class="border-b-2 border-zinc-950 pb-2 mb-8 flex items-center justify-between">
+        <h2 class="text-xl font-headline font-bold uppercase tracking-wider text-zinc-950 flex items-center gap-2">
+          <span class="w-2.5 h-5 bg-red-600 inline-block"></span>
+          Latest Dispatches & Exclusives by {author.name}
+        </h2>
+        <span class="text-xs font-mono text-zinc-500">{authorPosts.length} Stories Published</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {authorPosts.map((post) => (
+          <ArticleCard post={post} variant="standard" />
+        ))}
+      </div>
+    </div>
+  </div>
+</Layout>

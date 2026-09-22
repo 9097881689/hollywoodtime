@@ -1,0 +1,19 @@
+name = "hollywoodtime"
+main = "./dist/_worker.js/index.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+SITE_URL = "https://www.hollywoodtime.com"
+SITE_NAME = "Hollywood Time"
+
+# Cloudflare D1 Database binding for articles & indexing logs
+[[d1_databases]]
+binding = "DB"
+database_name = "hollywoodtime-db"
+database_id = "73d220c7-8f24-4694-91f0-7612a2d67511"
+
+# Cloudflare KV binding for feed deduplication & cache
+[[kv_namespaces]]
+binding = "KV"
+id = "hollywoodtime_kv_placeholder"

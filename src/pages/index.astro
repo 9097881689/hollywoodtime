@@ -1,0 +1,41 @@
+---
+import Layout from '../layouts/Layout.astro';
+import HeroSection from '../components/HeroSection.astro';
+import CategorySection from '../components/CategorySection.astro';
+import AdBanner from '../components/AdBanner.astro';
+import { getFeaturedPost, getTrendingPosts, getAllCategoryGroups } from '../lib/db';
+
+const db = (Astro.locals as any)?.runtime?.env?.DB;
+const featuredPost = await getFeaturedPost(db);
+const trendingPosts = await getTrendingPosts(4, db);
+const categoryGroups = await getAllCategoryGroups(3, db); // Strictly latest 3 posts per category
+---
+
+<Layout
+  title="Hollywood Time | Latest Movies, TV, Music, Awards & Pop Culture News"
+  description="The definitive voice of entertainment journalism. Breaking news, exclusive features, box office analysis, and awards race coverage."
+>
+  <!-- Hero Showcase: Main Lead Story + Breaking News Sidebar -->
+  {featuredPost && (
+    <HeroSection
+      featuredPost={featuredPost}
+      trendingPosts={trendingPosts}
+    />
+  )}
+
+  <!-- High-Yield Leaderboard Ad Slot -->
+  <AdBanner slotType="leaderboard" />
+
+  <!-- Category Showcase: Strictly Latest 3 Posts per Category -->
+  <div class="space-y-4">
+    {categoryGroups.map(({ category, posts }, idx) => (
+      <>
+        <CategorySection
+          category={category}
+          posts={posts}
+        />
+        {idx === 1 && <AdBanner slotType="in-feed" />}
+      </>
+    ))}
+  </div>
+</Layout>

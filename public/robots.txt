@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-News
+Allow: /
+
+Sitemap: https://www.hollywoodtime.com/sitemap.xml
+Sitemap: https://www.hollywoodtime.com/sitemap-news.xml

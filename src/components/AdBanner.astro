@@ -1,0 +1,36 @@
+---
+interface Props {
+  slotType: 'leaderboard' | 'in-article' | 'sidebar' | 'in-feed';
+  adSlot?: string;
+  adClient?: string;
+}
+
+const {
+  slotType,
+  adSlot = '1234567890',
+  adClient = 'ca-pub-XXXXXXXXXXXXXXXX',
+} = Astro.props;
+
+// Ad placements disabled for now per user instruction ("ad ka place abhi nahi dalna hai ye bad me dalenge")
+const adsEnabled = false;
+---
+
+{adsEnabled && (
+  <div class="w-full my-8 mx-auto flex flex-col items-center justify-center">
+    <span class="text-[9px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-1.5 select-none">
+      ADVERTISEMENT
+    </span>
+    <ins
+      class="adsbygoogle"
+      style="display:block; text-align:center;"
+      data-ad-layout={slotType === 'in-article' ? 'in-article' : undefined}
+      data-ad-format={slotType === 'in-article' ? 'fluid' : 'auto'}
+      data-ad-client={adClient}
+      data-ad-slot={adSlot}
+      data-full-width-responsive="true"
+    ></ins>
+    <script is:inline>
+      (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+)}

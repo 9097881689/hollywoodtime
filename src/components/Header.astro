@@ -1,0 +1,169 @@
+---
+import { getTrendingPosts } from '../lib/db';
+
+interface Props {
+  currentCategory?: string;
+}
+
+const { currentCategory } = Astro.props;
+
+const NAV_ITEMS = [
+  { name: 'HOME', href: '/' },
+  { name: 'MOVIES', href: '/movies' },
+  { name: 'TV', href: '/tv' },
+  { name: 'MUSIC', href: '/music' },
+  { name: 'AWARDS', href: '/awards' },
+  { name: 'BUSINESS', href: '/business' },
+  { name: 'STYLE', href: '/style' },
+  { name: 'CULTURE', href: '/culture' },
+];
+
+const formattedDate = new Intl.DateTimeFormat('en-US', {
+  weekday: 'short',
+  month: 'short',
+  day: 'numeric',
+}).format(new Date());
+
+const trendingStories = await getTrendingPosts(6);
+---
+
+<header class="w-full bg-white sticky top-0 z-50 shadow-[0_1px_8px_rgba(0,0,0,0.06)]">
+  <!-- Top Unified Ribbon: Date + TRENDING Moving Marquee + Utilities (Single Bar) -->
+  <div class="bg-zinc-950 text-zinc-300 py-1.5 px-4 sm:px-8 border-b border-zinc-900 overflow-hidden select-none">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-3 text-[11px]">
+      
+      <!-- Left: Date & City -->
+      <div class="flex-shrink-0 hidden md:flex items-center space-x-2 text-[10px] text-zinc-400 font-medium">
+        <span class="text-white font-semibold uppercase">{formattedDate}</span>
+        <span class="text-zinc-600">•</span>
+        <span class="text-amber-400">LA</span>
+      </div>
+
+      <!-- Center: Trending Badge + Continuous Moving Marquee -->
+      <div class="flex-1 min-w-0 flex items-center gap-2 overflow-hidden">
+        <div class="flex-shrink-0 flex items-center space-x-1 bg-red-600 px-2 py-0.5 rounded-xs text-[9px] font-black uppercase tracking-widest text-white shadow-xs">
+          <span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+          <span>TRENDING</span>
+        </div>
+
+        <div class="relative w-full overflow-hidden whitespace-nowrap">
+          <div class="marquee-track flex items-center space-x-6 text-[11px] font-serif hover:[animation-play-state:paused]">
+            <!-- Iteration 1 -->
+            {trendingStories.map((story) => (
+              <a
+                href={`/news/${story.slug}`}
+                class="inline-flex items-center space-x-1.5 text-zinc-300 hover:text-white transition group"
+              >
+                <span class="text-red-500 font-sans font-black text-[9px] uppercase tracking-wider group-hover:underline">
+                  [{story.categoryLabel}]
+                </span>
+                <span class="text-zinc-200 group-hover:text-amber-300 transition-colors duration-150">
+                  {story.title}
+                </span>
+                <span class="text-zinc-600 ml-3">•</span>
+              </a>
+            ))}
+            <!-- Iteration 2 for seamless loop -->
+            {trendingStories.map((story) => (
+              <a
+                href={`/news/${story.slug}`}
+                class="inline-flex items-center space-x-1.5 text-zinc-300 hover:text-white transition group"
+              >
+                <span class="text-red-500 font-sans font-black text-[9px] uppercase tracking-wider group-hover:underline">
+                  [{story.categoryLabel}]
+                </span>
+                <span class="text-zinc-200 group-hover:text-amber-300 transition-colors duration-150">
+                  {story.title}
+                </span>
+                <span class="text-zinc-600 ml-3">•</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Reader Links -->
+      <div class="flex-shrink-0 hidden lg:flex items-center space-x-3 text-[10px] text-zinc-400 font-medium">
+        <a href="/about" class="hover:text-white transition">About</a>
+        <a href="/editorial-policy" class="hover:text-white transition">Standards</a>
+        <a href="/contact" class="hover:text-white transition">Contact</a>
+        <a href="/feed.xml" target="_blank" class="text-amber-400 hover:text-amber-300 transition font-bold flex items-center gap-1">
+          <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19 7.38 20 6.18 20C5 20 4 19 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1Z" />
+          </svg>
+          RSS
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Brand Masthead (Compact 20% Smaller & Centered) -->
+  <div class="py-3 sm:py-3.5 px-4 sm:px-8 bg-white border-b border-zinc-200">
+    <div class="max-w-7xl mx-auto flex items-center justify-center text-center">
+      <div class="group">
+        <a href="/" class="inline-flex flex-col items-center">
+          <div class="flex items-center space-x-2">
+            <span class="inline-block w-2.5 h-2.5 bg-red-600 transform rotate-45 mb-1 shadow-xs"></span>
+            <span class="text-2xl sm:text-3xl md:text-[42px] font-black font-serif tracking-tight text-zinc-950 uppercase group-hover:text-red-600 transition-colors duration-150 leading-none">
+              HOLLYWOOD TIME
+            </span>
+          </div>
+          <div class="flex items-center space-x-2 mt-1">
+            <span class="h-[1px] w-6 sm:w-10 bg-zinc-300"></span>
+            <p class="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.26em] text-zinc-500 font-sans">
+              The Pulse of Global Entertainment
+            </p>
+            <span class="h-[1px] w-6 sm:w-10 bg-zinc-300"></span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Primary Navigation Bar -->
+  <nav class="bg-white border-b border-zinc-950">
+    <div class="max-w-7xl mx-auto px-4 sm:px-8">
+      <ul class="flex items-center justify-start sm:justify-center space-x-2 sm:space-x-6 overflow-x-auto py-1.5 text-[10px] sm:text-[11px] font-bold tracking-[0.14em] uppercase no-scrollbar">
+        {NAV_ITEMS.map((item) => {
+          const isActive = currentCategory === item.name.toLowerCase() || (item.name === 'HOME' && !currentCategory);
+          return (
+            <li>
+              <a
+                href={item.href}
+                class={`px-2 py-0.5 block whitespace-nowrap transition-colors duration-150 ${
+                  isActive
+                    ? 'text-red-600 font-black border-b-2 border-red-600'
+                    : 'text-zinc-900 hover:text-red-600'
+                }`}
+              >
+                {item.name}
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  </nav>
+</header>
+
+<style>
+  @keyframes marqueeScroll {
+    0% {
+      transform: translateX(0%);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  .marquee-track {
+    display: inline-flex;
+    white-space: nowrap;
+    width: max-content;
+    animation: marqueeScroll 40s linear infinite;
+  }
+
+  .marquee-track:hover {
+    animation-play-state: paused;
+  }
+</style>

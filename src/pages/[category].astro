@@ -1,0 +1,64 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ArticleCard from '../components/ArticleCard.astro';
+import { CATEGORIES, getPostsByCategory } from '../lib/db';
+
+const { category } = Astro.params;
+
+const currentCatObj = CATEGORIES.find(
+  (c) => c.slug.toLowerCase() === category?.toLowerCase()
+);
+
+if (!currentCatObj) {
+  return Astro.redirect('/');
+}
+
+// Strictly fetch the latest posts for this category
+const db = (Astro.locals as any)?.runtime?.env?.DB;
+const posts = await getPostsByCategory(currentCatObj.slug, 12, db);
+const leadPost = posts[0];
+const remainingPosts = posts.slice(1);
+---
+
+<Layout
+  title={`${currentCatObj.label} News & Analysis | Hollywood Time`}
+  description={`Comprehensive coverage of ${currentCatObj.label.toLowerCase()} news, exclusives, industry analysis, and interviews from Hollywood Time.`}
+  currentCategory={currentCatObj.slug}
+>
+  <!-- Category Title Banner -->
+  <div class="border-b-4 border-black pb-4 mb-8">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span class="w-3 h-8 bg-hollywood-red inline-block"></span>
+        <h1 class="text-3xl sm:text-5xl font-black font-headline tracking-tight uppercase text-black">
+          {currentCatObj.label}
+        </h1>
+      </div>
+      <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">
+        {posts.length} Stories Available
+      </span>
+    </div>
+    <p class="text-gray-600 font-serif text-sm mt-2 italic">
+      The latest industry dispatches, breaking exclusives, and insider perspectives in {currentCatObj.label.toLowerCase()}.
+    </p>
+  </div>
+
+  {leadPost && (
+    <div class="mb-12">
+      <ArticleCard post={leadPost} variant="lead" />
+    </div>
+  )}
+
+  {remainingPosts.length > 0 && (
+    <div class="border-t border-gray-200 pt-8">
+      <h2 class="text-sm font-black font-headline uppercase tracking-widest text-black mb-6">
+        Latest In {currentCatObj.label}
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {remainingPosts.map((post) => (
+          <ArticleCard post={post} variant="standard" />
+        ))}
+      </div>
+    </div>
+  )}
+</Layout>

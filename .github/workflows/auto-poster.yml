@@ -1,0 +1,22 @@
+name: Hollywood Time Auto-Poster
+
+on:
+  schedule:
+    # Run every 30 minutes
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # Allow manual trigger anytime
+
+jobs:
+  sync-news:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Hollywood Time Auto-Sync & Google Indexing
+        run: |
+          curl -s -X POST https://hollywoodtime.pages.dev/api/sync \
+            -H "Authorization: Bearer ${{ secrets.SYNC_SECRET_TOKEN || 'hollywoodtime_secret_key_2026' }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "geminiApiKey": "${{ secrets.GEMINI_API_KEY }}",
+              "serviceAccountJson": "${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}"
+            }'
+
