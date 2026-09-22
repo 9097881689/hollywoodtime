@@ -11,7 +11,7 @@
 
 const TARGET_URL = process.env.SITE_URL
   ? `${process.env.SITE_URL.replace(/\/$/, '')}/api/sync`
-  : 'http://localhost:4321/api/sync';
+  : 'https://hollywoodtime.pages.dev/api/sync';
 
 const API_SECRET = process.env.API_SECRET || 'hollywoodtime_secret_key_2026';
 
@@ -64,7 +64,7 @@ async function executeSync() {
 const args = process.argv.slice(2);
 const isOnce = args.includes('--once');
 const intervalIdx = args.indexOf('--interval');
-const intervalMinutes = intervalIdx !== -1 && args[intervalIdx + 1] ? parseInt(args[intervalIdx + 1], 10) : 15;
+const intervalMinutes = intervalIdx !== -1 && args[intervalIdx + 1] ? parseInt(args[intervalIdx + 1], 10) : 5;
 
 if (isOnce) {
   executeSync().then(() => process.exit(0));

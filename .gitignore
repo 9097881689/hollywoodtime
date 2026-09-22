@@ -14,8 +14,10 @@ node_modules/
 .env.*
 !.env.example
 
-# Logs
+# Logs & locks
+logs/
 *.log
+data/*.lock
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
