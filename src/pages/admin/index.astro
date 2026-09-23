@@ -96,15 +96,102 @@ const logs = await getIndexLogs();
       </div>
     </div>
 
+    <!-- AI News Fetch & Instant Rewriter Section -->
+    <section id="ai-fetch-section" class="bg-gradient-to-br from-zinc-900 to-zinc-950 text-white border border-zinc-800 p-6 sm:p-7 rounded-xl shadow-md mb-8">
+      <div class="border-b border-zinc-800 pb-3 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="px-2 py-0.5 bg-red-600/30 text-red-400 border border-red-500/40 rounded text-[10px] font-black uppercase tracking-widest">
+              AI FETCH ENGINE
+            </span>
+            <span class="text-xs text-zinc-400 font-mono">Gemini & Journalistic Transform</span>
+          </div>
+          <h2 class="text-lg sm:text-xl font-black font-headline uppercase tracking-wide text-white">
+            ⚡ AI News Fetch & Instant Rewriter
+          </h2>
+          <p class="text-xs text-zinc-400 font-sans mt-0.5">
+            Enter any news link (Variety, Deadline, THR, etc.) or breaking topic — AI will fetch and rewrite it into a complete human-style article.
+          </p>
+        </div>
+        <span class="px-2.5 py-1 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase rounded-md border border-emerald-500/30 w-fit">
+          ✓ Active
+        </span>
+      </div>
+
+      <div class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div class="md:col-span-8">
+            <label class="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5">
+              News URL or Breaking Topic *
+            </label>
+            <input
+              type="text"
+              id="ai-fetch-input"
+              placeholder="e.g. https://deadline.com/... OR 'Christopher Nolan announces new 2026 film'"
+              class="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-zinc-800/90 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 font-mono"
+            />
+          </div>
+
+          <div class="md:col-span-4">
+            <label class="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5">
+              Category Override
+            </label>
+            <select
+              id="ai-fetch-category"
+              class="w-full px-3 py-2.5 text-xs sm:text-sm bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-red-500 font-sans"
+            >
+              <option value="">Auto-Detect Category</option>
+              <option value="movies">Movies</option>
+              <option value="tv">TV</option>
+              <option value="music">Music</option>
+              <option value="awards">Awards</option>
+              <option value="business">Business</option>
+              <option value="style">Style</option>
+              <option value="culture">Culture</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-zinc-800/80">
+          <div class="text-[11px] text-zinc-400 font-mono flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span>Supports direct URLs & raw topics</span>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              id="btn-ai-fill"
+              class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-bold text-xs uppercase tracking-wider rounded-lg border border-zinc-700 transition flex items-center gap-2 cursor-pointer active:scale-95"
+            >
+              <span id="spinner-ai-fill" class="hidden animate-spin">⟳</span>
+              <span>📝 AI Fetch & Fill Form</span>
+            </button>
+
+            <button
+              type="button"
+              id="btn-ai-autopublish"
+              class="px-5 py-2.5 bg-hollywood-red hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-md transition flex items-center gap-2 cursor-pointer active:scale-95"
+            >
+              <span id="spinner-ai-pub" class="hidden animate-spin">⟳</span>
+              <span>🚀 AI Fetch & 1-Click Publish Live</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="ai-fetch-alert" class="hidden p-3.5 rounded-lg text-xs font-medium"></div>
+      </div>
+    </section>
+
     <!-- Manual Story Publishing Form (Direct to D1) -->
     <section id="manual-publish-section" class="bg-white border border-zinc-200 p-6 rounded-xl shadow-xs mb-10">
       <div class="border-b border-zinc-200 pb-3 mb-5 flex items-center justify-between">
         <div>
           <h2 class="text-base font-black font-headline uppercase tracking-wider text-zinc-950">
-            ✍️ Publish New Article (Direct to Cloudflare D1)
+            ✍️ Edit & Publish Story (Direct to Cloudflare D1)
           </h2>
           <p class="text-xs text-zinc-500 font-sans">
-            Write a custom human-journalism article. It will be immediately saved to D1 SQLite and submitted to Google Indexing.
+            Write a custom human-journalism article or review AI-fetched content before saving to D1 SQLite.
           </p>
         </div>
         <span class="px-2.5 py-1 bg-red-50 text-red-700 text-[10px] font-bold uppercase rounded-md border border-red-200">
@@ -542,5 +629,94 @@ const logs = await getIndexLogs();
         alert(`Submission Error: ${err.message}`);
       }
     });
+
+    // AI Fetch Client Handlers
+    const inputAi = document.getElementById('ai-fetch-input');
+    const selectAiCat = document.getElementById('ai-fetch-category');
+    const btnAiFill = document.getElementById('btn-ai-fill');
+    const btnAiAutoPub = document.getElementById('btn-ai-autopublish');
+    const spinnerAiFill = document.getElementById('spinner-ai-fill');
+    const spinnerAiPub = document.getElementById('spinner-ai-pub');
+    const aiAlert = document.getElementById('ai-fetch-alert');
+
+    async function handleAiFetch(autoPublish) {
+      const source = inputAi?.value?.trim();
+      if (!source) {
+        alert('Please enter a news URL or breaking news topic to fetch.');
+        inputAi?.focus();
+        return;
+      }
+
+      const activeBtn = autoPublish ? btnAiAutoPub : btnAiFill;
+      const activeSpinner = autoPublish ? spinnerAiPub : spinnerAiFill;
+
+      if (activeBtn) activeBtn.disabled = true;
+      if (activeSpinner) activeSpinner.classList.remove('hidden');
+      if (aiAlert) aiAlert.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/ai-fetch', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer hollywoodtime_secret_key_2026'
+          },
+          body: JSON.stringify({
+            source,
+            category: selectAiCat?.value || undefined,
+            autoPublish: Boolean(autoPublish),
+            serviceAccountJson: inputSa?.value || undefined
+          })
+        });
+
+        const data = await res.json();
+        if (aiAlert) aiAlert.classList.remove('hidden');
+
+        if (data.success && data.post) {
+          if (autoPublish) {
+            aiAlert.className = 'p-4 rounded-xl border text-xs bg-emerald-950/80 border-emerald-500/50 text-emerald-200';
+            aiAlert.innerHTML = `<strong>✓ AI Fetch & Publish Success!</strong> Live in D1 & submitted to Google. <a href="${data.url}" target="_blank" class="underline font-bold text-white ml-1">View Live Story ↗</a>`;
+            setTimeout(() => window.location.reload(), 2000);
+          } else {
+            // Populate form below
+            const p = data.post;
+            const titleInput = document.getElementById('post-title');
+            const catSelect = document.getElementById('post-category');
+            const imgInput = document.getElementById('post-image');
+            const authorSelect = document.getElementById('post-author');
+            const excerptInput = document.getElementById('post-excerpt');
+            const contentInput = document.getElementById('post-content');
+
+            if (titleInput) titleInput.value = p.title || '';
+            if (catSelect && p.category) catSelect.value = p.category.toLowerCase();
+            if (imgInput) imgInput.value = p.featuredImage || '';
+            if (authorSelect && p.author?.name) authorSelect.value = p.author.name;
+            if (excerptInput) excerptInput.value = p.excerpt || '';
+            if (contentInput) contentInput.value = p.content || '';
+
+            aiAlert.className = 'p-4 rounded-xl border text-xs bg-emerald-950/80 border-emerald-500/50 text-emerald-200';
+            aiAlert.innerHTML = `<strong>✓ AI Fetch Complete!</strong> Story populated into the form below. Review or edit, then click Publish.`;
+
+            // Smooth scroll to form
+            document.getElementById('manual-publish-section')?.scrollIntoView({ behavior: 'smooth' });
+          }
+        } else {
+          aiAlert.className = 'p-4 rounded-xl border text-xs bg-red-950/80 border-red-500/50 text-red-200';
+          aiAlert.textContent = `AI Fetch Error: ${data.error || 'Failed to fetch article.'}`;
+        }
+      } catch (err) {
+        if (aiAlert) {
+          aiAlert.classList.remove('hidden');
+          aiAlert.className = 'p-4 rounded-xl border text-xs bg-red-950/80 border-red-500/50 text-red-200';
+          aiAlert.textContent = `Network / AI Fetch Error: ${err.message}`;
+        }
+      } finally {
+        if (activeBtn) activeBtn.disabled = false;
+        if (activeSpinner) activeSpinner.classList.add('hidden');
+      }
+    }
+
+    btnAiFill?.addEventListener('click', () => handleAiFetch(false));
+    btnAiAutoPub?.addEventListener('click', () => handleAiFetch(true));
   </script>
 </Layout>
