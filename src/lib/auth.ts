@@ -1,7 +1,6 @@
 export const ADMIN_CREDENTIALS = {
   username: 'admin',
-  password: 'hollywood@2026',
-  fallbackPassword: 'admin',
+  password: 'hollywood@8093',
 };
 
 export const AUTH_COOKIE_NAME = 'ht_admin_auth';
@@ -13,7 +12,7 @@ export function verifyAdminCredentials(username?: string, password?: string): bo
   const p = password.trim();
 
   const isUserValid = u === 'admin' || u === 'hollywood' || u === 'hollywoodtime';
-  const isPassValid = p === 'hollywood@2026' || p === 'admin123' || p === 'admin' || p === 'hollywoodtime_secret_key_2026';
+  const isPassValid = p === 'hollywood@8093';
 
   return isUserValid && isPassValid;
 }
