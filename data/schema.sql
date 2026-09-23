@@ -30,3 +30,10 @@ CREATE TABLE IF NOT EXISTS posts (
 CREATE INDEX IF NOT EXISTS idx_posts_published ON posts(published_at DESC);
 CREATE INDEX IF NOT EXISTS idx_posts_category ON posts(category, published_at DESC);
 CREATE INDEX IF NOT EXISTS idx_posts_slug ON posts(slug);
+
+CREATE TABLE IF NOT EXISTS login_attempts (
+  ip TEXT PRIMARY KEY,
+  failed_count INTEGER DEFAULT 0,
+  locked_until TEXT,
+  last_attempt TEXT
+);
