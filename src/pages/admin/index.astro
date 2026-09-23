@@ -2,67 +2,241 @@
 import Layout from '../../layouts/Layout.astro';
 import { getAllPosts, getIndexLogs } from '../../lib/db';
 import { DEFAULT_FEED_SOURCES } from '../../lib/feeds';
+import { AUTH_COOKIE_NAME, isAuthenticated } from '../../lib/auth';
 
-const posts = await getAllPosts();
+// Enforce authentication
+const authCookie = Astro.cookies.get(AUTH_COOKIE_NAME)?.value;
+if (!isAuthenticated(authCookie)) {
+  return Astro.redirect('/admin/login');
+}
+
+const db = (Astro.locals as any)?.runtime?.env?.DB;
+const posts = await getAllPosts(db);
 const logs = await getIndexLogs();
 ---
 
 <Layout
-  title="Hollywood Time Control Hub | Auto-Ingestion & Google Search Console Indexing"
+  title="Hollywood Time Control Hub | Operations & Editorial Admin"
   description="Manage RSS feeds, trigger AI rewriting, monitor Google News indexing status, and manage Cloudflare edge sync."
 >
-  <div class="max-w-6xl mx-auto py-4">
-    <!-- Header banner -->
-    <div class="bg-black text-white p-6 rounded-sm mb-8 border-l-4 border-hollywood-red flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+  <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6">
+    
+    <!-- Top Operations Banner -->
+    <div class="bg-zinc-950 text-white p-6 sm:p-8 rounded-xl mb-8 border-l-4 border-hollywood-red shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
       <div>
-        <div class="flex items-center gap-2">
-          <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-          <span class="text-xs font-mono uppercase tracking-widest text-emerald-400">Live Ingestion & Indexing Engine</span>
+        <div class="flex items-center gap-3">
+          <span class="relative flex h-3 w-3">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+          </span>
+          <span class="text-xs font-mono uppercase tracking-widest text-emerald-400 font-bold">
+            Live Ingestion & Edge D1 SQLite Connected
+          </span>
+          <span class="text-xs text-zinc-500">•</span>
+          <span class="text-xs font-mono text-zinc-400">User: <strong class="text-zinc-200">admin</strong></span>
         </div>
-        <h1 class="text-2xl sm:text-3xl font-black font-headline tracking-wide uppercase mt-1">
+        <h1 class="text-2xl sm:text-3xl font-black font-headline tracking-wide uppercase mt-2">
           Hollywood Time Operations Hub
         </h1>
-        <p class="text-xs text-gray-400 font-serif mt-1">
-          Automated multi-source monitor, AI news rewriter, and Google Indexing API publisher.
+        <p class="text-xs sm:text-sm text-zinc-400 font-sans mt-1">
+          Automated multi-source monitor, AI news rewriter, Google Indexing API publisher, and Cloudflare D1 editor.
         </p>
       </div>
 
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-3">
         <button
           id="btn-sync-now"
-          class="px-5 py-2.5 bg-hollywood-red hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider rounded-sm shadow-md transition flex items-center gap-2 cursor-pointer"
+          class="px-5 py-2.5 bg-hollywood-red hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-md transition flex items-center gap-2 cursor-pointer active:scale-95"
         >
           <span id="sync-spinner" class="hidden animate-spin">⟳</span>
           <span>⚡ Sync & Auto-Rewrite Now</span>
         </button>
+
+        <a
+          href="#manual-publish-section"
+          class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs uppercase tracking-wider rounded-lg transition"
+        >
+          ✍️ Write New Story
+        </a>
+
+        <a
+          href="/admin/logout"
+          class="px-3.5 py-2.5 bg-zinc-900 hover:bg-red-950/80 text-zinc-400 hover:text-red-400 font-bold text-xs uppercase tracking-wider rounded-lg border border-zinc-800 transition"
+          title="Sign out of Admin Session"
+        >
+          Logout ⇥
+        </a>
       </div>
     </div>
 
     <!-- Live Sync Alert Container -->
-    <div id="sync-alert" class="hidden mb-8 p-4 rounded-sm border text-xs"></div>
+    <div id="sync-alert" class="hidden mb-8 p-4 rounded-lg border text-xs transition duration-200"></div>
 
-    <!-- Feed Sources Grid -->
+    <!-- Quick Stats Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white p-4 rounded-xl border border-zinc-200 shadow-xs">
+        <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold">Total Posts</div>
+        <div class="text-2xl font-serif font-black text-zinc-950 mt-1">{posts.length}</div>
+        <div class="text-[10px] text-emerald-600 font-semibold mt-0.5">✓ D1 SQLite Synced</div>
+      </div>
+      <div class="bg-white p-4 rounded-xl border border-zinc-200 shadow-xs">
+        <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold">Categories</div>
+        <div class="text-2xl font-serif font-black text-zinc-950 mt-1">7</div>
+        <div class="text-[10px] text-zinc-500 font-semibold mt-0.5">Latest 3 strictly per category</div>
+      </div>
+      <div class="bg-white p-4 rounded-xl border border-zinc-200 shadow-xs">
+        <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold">Auto-Post Cycle</div>
+        <div class="text-2xl font-serif font-black text-zinc-950 mt-1">5 Min</div>
+        <div class="text-[10px] text-emerald-600 font-semibold mt-0.5">Crontab & Action Active</div>
+      </div>
+      <div class="bg-white p-4 rounded-xl border border-zinc-200 shadow-xs">
+        <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold">Verified Byline</div>
+        <div class="text-2xl font-serif font-black text-zinc-950 mt-1">4 Staff</div>
+        <div class="text-[10px] text-blue-600 font-semibold mt-0.5">✓ Verified Tick Enabled</div>
+      </div>
+    </div>
+
+    <!-- Manual Story Publishing Form (Direct to D1) -->
+    <section id="manual-publish-section" class="bg-white border border-zinc-200 p-6 rounded-xl shadow-xs mb-10">
+      <div class="border-b border-zinc-200 pb-3 mb-5 flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-black font-headline uppercase tracking-wider text-zinc-950">
+            ✍️ Publish New Article (Direct to Cloudflare D1)
+          </h2>
+          <p class="text-xs text-zinc-500 font-sans">
+            Write a custom human-journalism article. It will be immediately saved to D1 SQLite and submitted to Google Indexing.
+          </p>
+        </div>
+        <span class="px-2.5 py-1 bg-red-50 text-red-700 text-[10px] font-bold uppercase rounded-md border border-red-200">
+          Instant Live
+        </span>
+      </div>
+
+      <form id="form-manual-post" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+          <div class="md:col-span-8">
+            <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+              Article Title *
+            </label>
+            <input
+              type="text"
+              id="post-title"
+              required
+              placeholder="e.g. Christopher Nolan Sets Next Epic Feature at Universal"
+              class="w-full px-3.5 py-2 text-sm border border-zinc-300 rounded-lg focus:outline-none focus:border-red-600 font-serif"
+            />
+          </div>
+
+          <div class="md:col-span-4">
+            <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+              Category *
+            </label>
+            <select
+              id="post-category"
+              required
+              class="w-full px-3 py-2 text-sm border border-zinc-300 rounded-lg focus:outline-none focus:border-red-600 bg-white"
+            >
+              <option value="movies">Movies</option>
+              <option value="tv">TV</option>
+              <option value="music">Music</option>
+              <option value="awards">Awards</option>
+              <option value="business">Business</option>
+              <option value="style">Style</option>
+              <option value="culture">Culture</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+          <div class="md:col-span-6">
+            <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+              Featured Image URL
+            </label>
+            <input
+              type="url"
+              id="post-image"
+              placeholder="https://images.unsplash.com/photo-..."
+              class="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-lg focus:outline-none focus:border-red-600 font-mono"
+            />
+          </div>
+
+          <div class="md:col-span-6">
+            <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+              Author (Title Case with ✓)
+            </label>
+            <select
+              id="post-author"
+              class="w-full px-3 py-2 text-sm border border-zinc-300 rounded-lg focus:outline-none focus:border-red-600 bg-white"
+            >
+              <option value="A.K. Singh">A.K. Singh (Editor-in-Chief)</option>
+              <option value="Bidyanand">Bidyanand (Film & TV Critic)</option>
+              <option value="S.K. Singh">S.K. Singh (Music & Awards Editor)</option>
+              <option value="N.K. Mishra">N.K. Mishra (Style & Culture Correspondent)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+            Article Summary / Excerpt *
+          </label>
+          <input
+            type="text"
+            id="post-excerpt"
+            required
+            placeholder="A compelling 2-sentence editorial overview of the breaking story..."
+            class="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-lg focus:outline-none focus:border-red-600"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+            Full Editorial Article Content (HTML / Longform) *
+          </label>
+          <textarea
+            id="post-content"
+            rows="6"
+            required
+            placeholder="<p class='lead'>Opening drop cap paragraph...</p><h2>Subheading</h2><p>Analysis paragraph...</p><blockquote>Quote</blockquote>"
+            class="w-full px-3.5 py-2.5 text-xs font-mono border border-zinc-300 rounded-lg focus:outline-none focus:border-red-600"
+          ></textarea>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <button
+            type="submit"
+            id="btn-publish-submit"
+            class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-sm transition cursor-pointer"
+          >
+            Publish Live to Cloudflare D1 →
+          </button>
+        </div>
+      </form>
+      <div id="manual-post-alert" class="hidden mt-4 p-3 rounded-lg text-xs font-medium"></div>
+    </section>
+
+    <!-- Monitored Sources Grid -->
     <section class="mb-10">
       <div class="flex items-center justify-between border-b-2 border-black pb-2 mb-4">
         <h2 class="text-base font-black font-headline uppercase tracking-wider text-black">
           Monitored Sources (4 Feeds)
         </h2>
-        <span class="text-xs font-mono text-gray-500">Auto-Polling Active</span>
+        <span class="text-xs font-mono text-zinc-500 font-semibold">Auto-Polling Every 5 Minutes</span>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {DEFAULT_FEED_SOURCES.map((src) => (
-          <div class="border border-gray-200 bg-white p-4 rounded-sm shadow-sm flex flex-col justify-between">
+          <div class="border border-zinc-200 bg-white p-4 rounded-xl shadow-xs flex flex-col justify-between">
             <div>
               <div class="flex items-center justify-between text-[11px] mb-2">
                 <span class="font-bold text-hollywood-red uppercase tracking-wider">{src.type.toUpperCase()}</span>
                 <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">ACTIVE</span>
               </div>
-              <h3 class="text-sm font-bold text-black font-serif line-clamp-2 mb-1">{src.name}</h3>
-              <p class="text-[11px] text-gray-500 truncate font-mono">{src.url}</p>
+              <h3 class="text-sm font-bold text-zinc-950 font-serif line-clamp-2 mb-1">{src.name}</h3>
+              <p class="text-[11px] text-zinc-500 truncate font-mono">{src.url}</p>
             </div>
-            <div class="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-400">
-              <span>Category: {src.categoryDefault}</span>
+            <div class="mt-3 pt-2 border-t border-zinc-100 flex items-center justify-between text-[10px] text-zinc-400">
+              <span>Category: <strong>{src.categoryDefault}</strong></span>
               <a href={src.url} target="_blank" class="hover:text-black font-bold">Inspect ↗</a>
             </div>
           </div>
@@ -73,46 +247,46 @@ const logs = await getIndexLogs();
     <!-- Google Search Console & Indexing Section -->
     <section class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10">
       <!-- Left: Manual Indexing Submitter -->
-      <div class="lg:col-span-5 bg-gray-50 border border-gray-200 p-5 rounded-sm">
-        <div class="border-b border-gray-200 pb-2 mb-4">
-          <h2 class="text-sm font-black font-headline uppercase tracking-wider text-black">
+      <div class="lg:col-span-5 bg-zinc-50 border border-zinc-200 p-5 rounded-xl">
+        <div class="border-b border-zinc-200 pb-2 mb-4">
+          <h2 class="text-sm font-black font-headline uppercase tracking-wider text-zinc-950">
             Google Indexing API Trigger
           </h2>
-          <p class="text-xs text-gray-500 font-serif">Instant URL notification for Googlebot crawl</p>
+          <p class="text-xs text-zinc-500 font-sans">Instant URL notification for Googlebot fast indexing</p>
         </div>
 
         <form id="form-index-url" class="space-y-4">
           <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1">
+            <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
               Article URL to Index
             </label>
             <input
               type="url"
               id="input-index-url"
-              placeholder="https://www.hollywoodtime.com/news/article-slug"
+              placeholder="https://hollywoodtime.pages.dev/news/article-slug"
               required
-              class="w-full px-3 py-2 text-xs border border-gray-300 rounded-sm focus:outline-none focus:border-hollywood-red font-mono"
+              class="w-full px-3 py-2 text-xs border border-zinc-300 rounded-lg focus:outline-none focus:border-red-600 font-mono bg-white"
             />
           </div>
 
           <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1">
+            <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
               Google Cloud Service Account JSON (Optional)
             </label>
             <textarea
               id="input-sa-json"
               rows="3"
               placeholder='{"type": "service_account", "client_email": "...", "private_key": "..."}'
-              class="w-full px-3 py-2 text-[11px] border border-gray-300 rounded-sm font-mono focus:outline-none focus:border-hollywood-red"
+              class="w-full px-3 py-2 text-[11px] border border-zinc-300 rounded-lg font-mono focus:outline-none focus:border-red-600 bg-white"
             ></textarea>
-            <p class="text-[10px] text-gray-500 mt-1">
+            <p class="text-[10px] text-zinc-500 mt-1">
               If omitted, simulated notification & Google News sitemap ping are executed automatically.
             </p>
           </div>
 
           <button
             type="submit"
-            class="w-full py-2 bg-black hover:bg-gray-800 text-white font-bold text-xs uppercase tracking-wider rounded-sm transition cursor-pointer"
+            class="w-full py-2.5 bg-zinc-950 hover:bg-zinc-800 text-white font-bold text-xs uppercase tracking-wider rounded-lg transition cursor-pointer"
           >
             Submit URL to Google Indexing
           </button>
@@ -120,15 +294,15 @@ const logs = await getIndexLogs();
       </div>
 
       <!-- Right: Live Indexing Audit Logs -->
-      <div class="lg:col-span-7 bg-white border border-gray-200 p-5 rounded-sm">
-        <div class="flex items-center justify-between border-b border-gray-200 pb-2 mb-4">
-          <h2 class="text-sm font-black font-headline uppercase tracking-wider text-black">
+      <div class="lg:col-span-7 bg-white border border-zinc-200 p-5 rounded-xl">
+        <div class="flex items-center justify-between border-b border-zinc-200 pb-2 mb-4">
+          <h2 class="text-sm font-black font-headline uppercase tracking-wider text-zinc-950">
             Google Indexing Activity Log
           </h2>
-          <span class="text-[11px] font-mono text-gray-400">Total: {logs.length}</span>
+          <span class="text-[11px] font-mono text-zinc-400">Total: {logs.length}</span>
         </div>
 
-        <div class="overflow-y-auto max-h-[300px] divide-y divide-gray-100 text-xs">
+        <div class="overflow-y-auto max-h-[300px] divide-y divide-zinc-100 text-xs">
           {logs.map((log) => (
             <div class="py-2.5 flex items-start justify-between gap-3">
               <div class="space-y-0.5">
@@ -138,12 +312,12 @@ const logs = await getIndexLogs();
                   }`}>
                     {log.status} ({log.statusCode || 200})
                   </span>
-                  <span class="font-mono text-gray-400 text-[10px]">{log.action}</span>
+                  <span class="font-mono text-zinc-400 text-[10px]">{log.action}</span>
                 </div>
-                <p class="font-mono text-black font-semibold truncate max-w-sm sm:max-w-md">{log.url}</p>
-                <p class="text-[11px] text-gray-500">{log.responseMessage}</p>
+                <p class="font-mono text-zinc-950 font-semibold truncate max-w-sm sm:max-w-md">{log.url}</p>
+                <p class="text-[11px] text-zinc-500">{log.responseMessage}</p>
               </div>
-              <time class="text-[10px] text-gray-400 whitespace-nowrap font-mono">
+              <time class="text-[10px] text-zinc-400 whitespace-nowrap font-mono">
                 {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </time>
             </div>
@@ -153,44 +327,49 @@ const logs = await getIndexLogs();
     </section>
 
     <!-- Published Articles Table -->
-    <section class="bg-white border border-gray-200 p-5 rounded-sm">
-      <div class="flex items-center justify-between border-b-2 border-black pb-2 mb-4">
+    <section class="bg-white border border-zinc-200 p-5 rounded-xl shadow-xs">
+      <div class="flex items-center justify-between border-b-2 border-black pb-3 mb-4">
         <div>
-          <h2 class="text-base font-black font-headline uppercase tracking-wider text-black">
+          <h2 class="text-base font-black font-headline uppercase tracking-wider text-zinc-950">
             Published Editorial Stories
           </h2>
-          <p class="text-xs text-gray-500">Every category strictly displays its latest 3 posts on the homepage.</p>
+          <p class="text-xs text-zinc-500">Persisted permanently in Cloudflare D1 SQLite database.</p>
         </div>
-        <span class="text-xs font-mono font-bold text-hollywood-red">{posts.length} Total Posts</span>
+        <span class="text-xs font-mono font-bold text-hollywood-red">{posts.length} Total Stories</span>
       </div>
 
       <div class="overflow-x-auto">
         <table class="w-full text-left text-xs">
-          <thead class="bg-gray-50 text-gray-600 uppercase font-bold text-[10px] tracking-wider border-b border-gray-200">
+          <thead class="bg-zinc-50 text-zinc-600 uppercase font-bold text-[10px] tracking-wider border-b border-zinc-200">
             <tr>
-              <th class="py-2 px-3">Story Title</th>
-              <th class="py-2 px-3">Category</th>
-              <th class="py-2 px-3">Byline</th>
-              <th class="py-2 px-3">Published</th>
-              <th class="py-2 px-3">Google Status</th>
-              <th class="py-2 px-3 text-right">Action</th>
+              <th class="py-2.5 px-3">Story Title</th>
+              <th class="py-2.5 px-3">Category</th>
+              <th class="py-2.5 px-3">Byline</th>
+              <th class="py-2.5 px-3">Published</th>
+              <th class="py-2.5 px-3">Google Status</th>
+              <th class="py-2.5 px-3 text-right">Action</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100">
+          <tbody class="divide-y divide-zinc-100">
             {posts.map((post) => (
-              <tr class="hover:bg-gray-50 transition">
-                <td class="py-2.5 px-3 font-serif font-bold text-black max-w-md">
-                  <a href={`/news/${post.slug}`} class="hover:text-hollywood-red transition line-clamp-1">
+              <tr class="hover:bg-zinc-50 transition">
+                <td class="py-2.5 px-3 font-serif font-bold text-zinc-950 max-w-md">
+                  <a href={`/news/${post.slug}`} target="_blank" class="hover:text-hollywood-red transition line-clamp-1">
                     {post.title}
                   </a>
                 </td>
                 <td class="py-2.5 px-3">
-                  <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-700">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-zinc-100 text-zinc-700">
                     {post.categoryLabel}
                   </span>
                 </td>
-                <td class="py-2.5 px-3 text-gray-600">{post.author.name}</td>
-                <td class="py-2.5 px-3 font-mono text-[11px] text-gray-500">
+                <td class="py-2.5 px-3 text-zinc-600">
+                  <span class="font-medium text-zinc-800 flex items-center gap-1">
+                    {post.author.name}
+                    <span class="w-3 h-3 rounded-full bg-blue-600 text-white inline-flex items-center justify-center text-[7px] font-black">✓</span>
+                  </span>
+                </td>
+                <td class="py-2.5 px-3 font-mono text-[11px] text-zinc-500">
                   {new Date(post.publishedAt).toLocaleDateString()}
                 </td>
                 <td class="py-2.5 px-3">
@@ -215,7 +394,7 @@ const logs = await getIndexLogs();
     </section>
   </div>
 
-  <!-- Interactive JavaScript for Live Triggering -->
+  <!-- Interactive JavaScript for Live Auto-Sync & Manual Story Publishing -->
   <script is:inline>
     const btnSync = document.getElementById('btn-sync-now');
     const syncSpinner = document.getElementById('sync-spinner');
@@ -223,11 +402,14 @@ const logs = await getIndexLogs();
     const formIndex = document.getElementById('form-index-url');
     const inputUrl = document.getElementById('input-index-url');
     const inputSa = document.getElementById('input-sa-json');
+    const formManual = document.getElementById('form-manual-post');
+    const manualAlert = document.getElementById('manual-post-alert');
 
     // Restore saved SA json if available
     const savedSa = localStorage.getItem('ht_service_account');
     if (savedSa && inputSa) inputSa.value = savedSa;
 
+    // 1-Click Sync Trigger
     btnSync?.addEventListener('click', async () => {
       btnSync.disabled = true;
       syncSpinner?.classList.remove('hidden');
@@ -236,7 +418,10 @@ const logs = await getIndexLogs();
       try {
         const res = await fetch('/api/sync', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer hollywoodtime_secret_key_2026'
+          },
           body: JSON.stringify({
             serviceAccountJson: inputSa?.value || undefined,
           }),
@@ -246,23 +431,23 @@ const logs = await getIndexLogs();
         syncAlert?.classList.remove('hidden');
 
         if (data.success) {
-          syncAlert.className = 'mb-8 p-4 rounded-sm border text-xs bg-emerald-50 border-emerald-300 text-emerald-900';
+          syncAlert.className = 'mb-8 p-4 rounded-xl border text-xs bg-emerald-50 border-emerald-300 text-emerald-900';
           syncAlert.innerHTML = `
             <strong>✓ Sync Succeeded!</strong> ${data.message}
             <div class="mt-2 text-[11px]">
               ${data.createdPosts && data.createdPosts.length > 0
                 ? `Created and indexed: ${data.createdPosts.map(p => `<strong>${p.title}</strong> (${p.category})`).join(', ')}`
-                : 'All feeds up to date. Latest 3 posts per category maintained.'}
+                : 'All feeds up to date. Latest 3 posts per category maintained in D1.'}
             </div>
           `;
-          setTimeout(() => window.location.reload(), 2500);
+          setTimeout(() => window.location.reload(), 2000);
         } else {
-          syncAlert.className = 'mb-8 p-4 rounded-sm border text-xs bg-red-50 border-red-300 text-red-900';
+          syncAlert.className = 'mb-8 p-4 rounded-xl border text-xs bg-red-50 border-red-300 text-red-900';
           syncAlert.textContent = `Sync Error: ${data.error || 'Unknown error'}`;
         }
       } catch (err) {
         syncAlert?.classList.remove('hidden');
-        syncAlert.className = 'mb-8 p-4 rounded-sm border text-xs bg-red-50 border-red-300 text-red-900';
+        syncAlert.className = 'mb-8 p-4 rounded-xl border text-xs bg-red-50 border-red-300 text-red-900';
         syncAlert.textContent = `Network / Sync Error: ${err.message}`;
       } finally {
         btnSync.disabled = false;
@@ -270,6 +455,67 @@ const logs = await getIndexLogs();
       }
     });
 
+    // Direct Manual Publishing Form
+    formManual?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('post-title')?.value;
+      const category = document.getElementById('post-category')?.value;
+      const featuredImage = document.getElementById('post-image')?.value || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80';
+      const authorName = document.getElementById('post-author')?.value;
+      const excerpt = document.getElementById('post-excerpt')?.value;
+      const content = document.getElementById('post-content')?.value;
+
+      if (!title || !category || !content) return;
+
+      const submitBtn = document.getElementById('btn-publish-submit');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Publishing to Cloudflare D1...';
+      }
+
+      try {
+        const res = await fetch('/api/publish', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer hollywoodtime_secret_key_2026'
+          },
+          body: JSON.stringify({
+            title,
+            category,
+            featuredImage,
+            excerpt,
+            content,
+            authorName,
+            serviceAccountJson: inputSa?.value || undefined
+          })
+        });
+
+        const data = await res.json();
+        manualAlert?.classList.remove('hidden');
+
+        if (data.success) {
+          manualAlert.className = 'mt-4 p-3.5 rounded-lg text-xs font-medium bg-emerald-50 border border-emerald-300 text-emerald-900';
+          manualAlert.innerHTML = `<strong>✓ Story Published Successfully!</strong> Saved to D1 SQLite database. <a href="${data.url}" target="_blank" class="underline font-bold ml-1">View Story ↗</a>`;
+          formManual.reset();
+          setTimeout(() => window.location.reload(), 2000);
+        } else {
+          manualAlert.className = 'mt-4 p-3.5 rounded-lg text-xs font-medium bg-red-50 border border-red-300 text-red-900';
+          manualAlert.textContent = `Publishing Error: ${data.error || 'Failed to save to D1.'}`;
+        }
+      } catch (err) {
+        manualAlert?.classList.remove('hidden');
+        manualAlert.className = 'mt-4 p-3.5 rounded-lg text-xs font-medium bg-red-50 border border-red-300 text-red-900';
+        manualAlert.textContent = `Network Error: ${err.message}`;
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Publish Live to Cloudflare D1 →';
+        }
+      }
+    });
+
+    // Single URL Indexing Form
     formIndex?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const url = inputUrl?.value;
