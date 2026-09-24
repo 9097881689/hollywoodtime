@@ -1,5 +1,6 @@
 import type { Post } from './types';
 import type { RawFeedItem } from './feeds';
+import { getAuthorForCategory } from './authors';
 
 // High-resolution thematic editorial images pool
 const THEMATIC_IMAGES: Record<string, string[]> = {
@@ -43,8 +44,6 @@ const THEMATIC_IMAGES: Record<string, string[]> = {
   ],
 };
 
-import { getAuthorForCategory } from './authors';
-
 export function isEntertainmentRelevant(item: RawFeedItem): boolean {
   const text = `${item.title} ${item.description || ''}`.toLowerCase();
   const keywords = [
@@ -83,6 +82,147 @@ export function detectCategory(item: RawFeedItem): string {
   return item.categoryHint || 'movies';
 }
 
+/**
+ * Advanced SEO Title Transformation Engine
+ * Rewrites the original news headline into a 100% unique, authoritative,
+ * and high-CTR headline that eliminates duplicate penalties in Google News.
+ */
+export function generateSeoRewrittenTitle(rawTitle: string, category: string, description?: string): string {
+  const clean = formatJournalisticHeadline(rawTitle);
+
+  // 1. Tragic Passing / Death Announcements
+  const deathMatch = clean.match(/^(.*?)\s+(?:died from|dies at|dead at|passes away)\s*(.*)$/i);
+  if (deathMatch) {
+    const person = deathMatch[1].trim();
+    return `Industry Mourns: Official Details Surface Following Tragic Passing of ${person}`;
+  }
+
+  // 2. High-Profile Network & Cast Signings
+  const joinMatch = clean.match(/^(.*?)\s+(?:joins|joined)\s+(.*?)(?:\s+as\s+(.*))?$/i);
+  if (joinMatch) {
+    const person = joinMatch[1].trim();
+    const company = joinMatch[2].trim();
+    const role = joinMatch[3] ? joinMatch[3].trim() : '';
+    if (role) {
+      return `Media Shakeup: ${person} Inks Strategic Deal with ${company} as ${role}`;
+    }
+    return `Casting & Executive Update: ${person} Inks Major Deal with ${company}`;
+  }
+
+  // 3. World Festival Premieres
+  const premMatch = clean.match(/^(.*?)\s+to\s+premiere\s+at\s+(.*)$/i);
+  if (premMatch) {
+    const project = premMatch[1].trim();
+    const venue = premMatch[2].trim();
+    return `Festival Circuit Spotlight: ${project} Locks in Prestigious World Debut at ${venue}`;
+  }
+
+  // 4. Interviews & In-Depth Reflections
+  const explainMatch = clean.match(/^(.*?)\s+(?:explains why|reflects on|reveals why|opens up on|talks)\s+(.*)$/i);
+  if (explainMatch) {
+    const person = explainMatch[1].trim();
+    let rest = explainMatch[2].trim()
+      .replace(/^["']|["']$/g, '')
+      .replace(/:\s*["'].*?["']$/, '');
+    return `Inside the Narrative: ${person} Goes Deep on ${rest}`;
+  }
+
+  // 5. Historical / Retrospective Features
+  const insideMatch = clean.match(/^Inside\s+(.*?)['’]s\s+(.*)$/i);
+  if (insideMatch) {
+    const subject = insideMatch[1].trim();
+    const subtopic = insideMatch[2].split(':')[0].trim();
+    return `Untold Hollywood History: Inside ${subject}'s Defining Path Through ${subtopic}`;
+  }
+
+  // 6. Breakthrough Talents & Career Pivots
+  const markMatch = clean.match(/^(?:As\s+(?:a|an)\s+)?(.*?),\s*(.*?)\s+is\s+making\s+(?:her|his|their)\s+mark/i);
+  if (markMatch) {
+    const role = markMatch[1].trim();
+    const person = markMatch[2].trim();
+    return `Breakthrough Profile: How ${person} Is Forging a Bold New Legacy in ${role}`;
+  }
+
+  // 7. Ecosystems & Media Building
+  const createMatch = clean.match(/^(.*?)\s+is\s+creating\s+(?:its|their)\s+own\s+(.*)$/i);
+  if (createMatch) {
+    const entity = createMatch[1].replace(/^[A-Za-z0-9\s,]+:\s*/, '').trim();
+    const ecosystem = createMatch[2].trim();
+    return `Media Ecosystem Shift: How ${entity} Is Building a Powerful New ${ecosystem}`;
+  }
+
+  // 8. Awards Campaigning & Category Placements
+  const awardsMatch = clean.match(/^(.*?)\s+(?:sets|plans)\s+(.*?)\s+awards\s+categories/i);
+  if (awardsMatch) {
+    const studio = awardsMatch[1].trim();
+    const project = awardsMatch[2].trim();
+    return `Awards Tracker: ${studio} Finalizes High-Stakes Oscar Campaign Strategy for ${project}`;
+  }
+
+  // 9. Trailers & Teaser Debuts
+  const trailerMatch = clean.match(/^(.*?)\s+trailer\s+(?:teases|reveals|drops|unveils)\s+(.*)$/i);
+  if (trailerMatch) {
+    const title = trailerMatch[1].trim();
+    const details = trailerMatch[2].trim();
+    return `First Look Breakdown: New Trailer for ${title} Offers Dramatic Clues on ${details}`;
+  }
+
+  // 10. Reviews & Critical Verdicts
+  const reviewMatch = clean.match(/^(.*?)\s+review:\s*(.*)$/i);
+  if (reviewMatch) {
+    const project = reviewMatch[1].trim();
+    const hook = reviewMatch[2].trim();
+    return `In-Depth Critical Verdict: Why ${project} Is Generating Major Critical Acclaim (${hook})`;
+  }
+
+  // Dynamic Journalistic Categories & Anchors
+  const catAnchors: Record<string, string[]> = {
+    movies: ['Cinema Insider:', 'Theatrical Focus:', 'Big Screen Analysis:', 'Box Office Spotlight:'],
+    tv: ['Streaming Dispatch:', 'Television Insider:', 'Peak TV Focus:', 'Small Screen Deep Dive:'],
+    awards: ['The Oscar Race:', 'Awards Contender:', 'Campaign Watch:', 'Ballot Breakdown:'],
+    business: ['Studio Intelligence:', 'Hollywood Business:', 'Industry Perspective:', 'Executive Suite:'],
+    music: ['Music Wire:', 'Sonic Spotlight:', 'Behind the Sound:', 'Chart Watch:'],
+    style: ['Red Carpet Beat:', 'Couture Insider:', 'Fashion Pulse:', 'Aesthetic Spotlight:'],
+    culture: ['Cultural Dispatch:', 'Pop Culture Pulse:', 'Special Report:', 'The Big Picture:']
+  };
+
+  const anchors = catAnchors[category.toLowerCase()] || ['Hollywood Exclusive:'];
+  const hash = Math.abs(clean.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0));
+  const anchor = anchors[hash % anchors.length];
+
+  // Dynamic verb transformations
+  let reworked = clean
+    .replace(/\bsets release date for\b/gi, 'Locks in Official Debut for')
+    .replace(/\bsets release for\b/gi, 'Locks in Official Debut for')
+    .replace(/\bconfirms\b/gi, 'Breaks Silence to Confirm')
+    .replace(/\bcasts\b/gi, 'Enlists Star Talent for')
+    .replace(/\bteases\b/gi, 'Offers Rare Revealing Clues on')
+    .replace(/\breturns to\b/gi, 'Plots Dramatic Return to')
+    .replace(/\bbegins filming\b/gi, 'Officially Kicks Off Production on')
+    .trim();
+
+  // If no specific verb was matched, apply engaging editorial structures
+  if (reworked === clean) {
+    const templates = [
+      `${anchor} Inside the High-Stakes Developments Surrounding ${clean}`,
+      `${anchor} Why the Latest Revelations Around ${clean} Have Hollywood Talking`,
+      `${anchor} Behind the Scenes of ${clean} as Industry Momentum Builds`
+    ];
+    reworked = templates[hash % templates.length];
+  } else {
+    reworked = `${anchor} ${reworked}`;
+  }
+
+  // Length safety guard (ideal Google SERP snippet: 55-90 characters)
+  if (reworked.length > 105) {
+    const trimmed = reworked.slice(0, 100);
+    const lastSp = trimmed.lastIndexOf(' ');
+    reworked = (lastSp > 45 ? trimmed.slice(0, lastSp) : trimmed) + '...';
+  }
+
+  return reworked.replace(/::+/g, ':').replace(/\s+/g, ' ').trim();
+}
+
 export async function rewriteArticleWithAI(item: RawFeedItem, apiKey?: string): Promise<Post> {
   const category = detectCategory(item);
   const authorObj = getAuthorForCategory(category);
@@ -93,25 +233,26 @@ export async function rewriteArticleWithAI(item: RawFeedItem, apiKey?: string): 
     avatar: authorObj.avatar,
     verified: true,
   };
-  const cleanHeadline = formatJournalisticHeadline(item.title);
 
-  // Clean slug creation
-  const baseSlug = cleanHeadline
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 75);
+  // Step 1: Algorithmic transformation guaranteed to produce a unique, SEO-friendly headline
+  const algorithmicRewrittenTitle = generateSeoRewrittenTitle(item.title, category, item.description);
+  let finalTitle = algorithmicRewrittenTitle;
+  let finalSubtitle = `An in-depth examination of the creative, business, and cultural currents driving the latest Hollywood developments.`;
+  let finalExcerpt = item.description || `Hollywood Time explores the deeper creative and business implications behind ${algorithmicRewrittenTitle}.`;
+  let fullArticleHtml = '';
+  let badge = getEditorialBadge(category);
+  let tags = ['Hollywood', 'Exclusive', category.toUpperCase(), 'Analysis'];
 
-  const slug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
-
-  // Pick thematic image
-  const images = THEMATIC_IMAGES[category] || THEMATIC_IMAGES.movies;
-  const featuredImage = item.imageUrl || images[Math.floor(Math.random() * images.length)];
-
-  // If Gemini API key is available, generate authentic longform human journalism
+  // Step 2: If Gemini API key is available, generate authentic longform human journalism with unique title
   if (apiKey) {
     try {
       const prompt = `You are a distinguished senior culture journalist and features writer at Hollywood Time, an authoritative publication revered for deep, stylish narrative journalism (like The New Yorker, Variety, or The Hollywood Reporter).
+
+CRITICAL TITLE REWRITING REQUIREMENT:
+You MUST NEVER repeat or copy the source headline! Generate a completely transformed, fresh, high-impact, SEO-optimized editorial headline that is 100% unique and superior to the original source.
+- Do NOT repeat the exact same sentence structure.
+- Add an authoritative journalistic hook (e.g. 'Inside...', 'Why...', 'First Look:', 'The Making of...', 'Analysis:').
+- Prioritize high-CTR keywords that rank in Google News.
 
 Write a COMPLETE, IMMERSIVE, HUMAN-STYLE article (600 to 800 words) based on the story below.
 
@@ -127,7 +268,7 @@ CRITICAL HUMAN WRITING RULES:
    - An insightful, resonant conclusion.
 4. FORMAT: Return a valid JSON object matching this schema:
 {
-  "title": "A sharp, evocative, human-written editorial headline (no boilerplate)",
+  "title": "A sharp, unique, non-copied editorial headline (MUST be different from the source)",
   "subtitle": "An elegant, informative sub-headline / dek",
   "excerpt": "A compelling 2-sentence journalistic summary of the story's core stakes",
   "badge": "EXCLUSIVE | FEATURE | ANALYSIS | THE RACE | INSIDE STORY",
@@ -136,8 +277,8 @@ CRITICAL HUMAN WRITING RULES:
 }
 
 Story Context:
-Title: ${cleanHeadline}
-Details: ${item.description || cleanHeadline}
+Original Headline: ${formatJournalisticHeadline(item.title)}
+Details: ${item.description || item.title}
 Department: ${category}`;
 
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
@@ -154,28 +295,14 @@ Department: ${category}`;
         const textResp = data.candidates?.[0]?.content?.parts?.[0]?.text;
         if (textResp) {
           const parsed = JSON.parse(textResp);
-          return {
-            id: `ht-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-            slug,
-            title: formatJournalisticHeadline(parsed.title || cleanHeadline),
-            subtitle: parsed.subtitle || `How new developments are reshaping the ${category} landscape across the entertainment industry.`,
-            excerpt: parsed.excerpt || item.description || cleanHeadline,
-            content: parsed.contentHtml,
-            category,
-            categoryLabel: category.charAt(0).toUpperCase() + category.slice(1),
-            badge: parsed.badge || 'FEATURE',
-            featuredImage,
-            imageCaption: `${cleanHeadline} — An inside look by Hollywood Time.`,
-            imageCredit: 'Hollywood Time Editorial',
-            author,
-            publishedAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            readingTimeMinutes: Math.max(4, Math.ceil((parsed.contentHtml?.length || 1000) / 450)),
-            sourceUrl: item.link,
-            sourceName: 'Hollywood Time Newsroom',
-            indexedInGoogle: true,
-            tags: parsed.tags || ['Hollywood', 'Entertainment', category.toUpperCase()],
-          };
+          if (parsed.title && parsed.title.toLowerCase().trim() !== item.title.toLowerCase().trim()) {
+            finalTitle = formatJournalisticHeadline(parsed.title);
+          }
+          if (parsed.subtitle) finalSubtitle = parsed.subtitle;
+          if (parsed.excerpt) finalExcerpt = parsed.excerpt;
+          if (parsed.contentHtml) fullArticleHtml = parsed.contentHtml;
+          if (parsed.badge) badge = parsed.badge;
+          if (parsed.tags) tags = parsed.tags;
         }
       }
     } catch (err) {
@@ -183,31 +310,46 @@ Department: ${category}`;
     }
   }
 
-  // High-End Human Narrative Engine (Fallback when API key is not supplied)
-  const fullArticleHtml = generateHumanEditorialArticle(cleanHeadline, item.description || '', category);
+  // Fallback to high-end human narrative engine if contentHtml was not generated
+  if (!fullArticleHtml) {
+    fullArticleHtml = generateHumanEditorialArticle(finalTitle, item.description || '', category);
+  }
+
+  // Create clean SEO slug from the REWRITTEN title (not the competitor's raw title!)
+  const baseSlug = finalTitle
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 75);
+
+  const slug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
+
+  // Pick thematic image
+  const images = THEMATIC_IMAGES[category] || THEMATIC_IMAGES.movies;
+  const featuredImage = item.imageUrl || images[Math.floor(Math.random() * images.length)];
   const nowIso = new Date().toISOString();
 
   return {
     id: `ht-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
     slug,
-    title: cleanHeadline,
-    subtitle: `An in-depth examination of the creative, business, and cultural currents driving the latest Hollywood developments.`,
-    excerpt: item.description || `Hollywood Time explores the deeper creative and business implications behind ${cleanHeadline}.`,
+    title: finalTitle,
+    subtitle: finalSubtitle,
+    excerpt: finalExcerpt,
     content: fullArticleHtml,
     category,
     categoryLabel: category.charAt(0).toUpperCase() + category.slice(1),
-    badge: getEditorialBadge(category),
+    badge,
     featuredImage,
-    imageCaption: `${cleanHeadline} — Photography and visual coverage from Hollywood Time.`,
+    imageCaption: `${finalTitle} — Photography and visual coverage from Hollywood Time.`,
     imageCredit: 'Hollywood Time Archive',
     author,
     publishedAt: nowIso,
     updatedAt: nowIso,
-    readingTimeMinutes: 4,
+    readingTimeMinutes: Math.max(4, Math.ceil((fullArticleHtml.length || 1000) / 450)),
     sourceUrl: item.link,
     sourceName: 'Hollywood Time Newsroom',
     indexedInGoogle: true,
-    tags: ['Hollywood', 'Exclusive', category.toUpperCase(), 'Analysis'],
+    tags,
   };
 }
 
