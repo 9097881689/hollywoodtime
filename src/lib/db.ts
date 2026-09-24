@@ -94,6 +94,48 @@ export async function getAllPosts(d1?: any): Promise<Post[]> {
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
 }
 
+/**
+ * Returns ALL posts from D1 (no LIMIT 70) for Admin Panel management with pagination.
+ */
+export async function getAllPostsAdmin(d1?: any): Promise<Post[]> {
+  if (d1) {
+    try {
+      const stmt = d1.prepare(`
+        SELECT id, slug, title, subtitle, excerpt, category, category_label, badge,
+               featured_image, image_caption, image_credit, author_name, author_role, author_slug,
+               author_avatar, published_at, updated_at, reading_time_minutes, source_url, source_name,
+               indexed_in_google, google_indexed_at, tags
+        FROM posts
+        ORDER BY published_at DESC
+      `);
+      const { results } = await stmt.all();
+      if (results && results.length > 0) {
+        return results.map(rowToPost);
+      }
+    } catch (e) {
+      console.warn('D1 getAllPostsAdmin failed, falling back:', e);
+    }
+  }
+  return getAllPosts(d1);
+}
+
+/**
+ * Deletes a post from D1 by ID or slug.
+ */
+export async function deletePost(idOrSlug: string, d1?: any): Promise<boolean> {
+  if (d1) {
+    try {
+      await d1.prepare('DELETE FROM posts WHERE id = ? OR slug = ?').bind(idOrSlug, idOrSlug).run();
+    } catch (e) {
+      console.error('Failed to delete post from D1:', e);
+      return false;
+    }
+  }
+  postsCache = postsCache.filter((p) => p.id !== idOrSlug && p.slug !== idOrSlug);
+  singlePostCache.delete(idOrSlug);
+  return true;
+}
+
 export async function getFeaturedPost(d1?: any): Promise<Post> {
   const all = await getAllPosts(d1);
   return all[0];

@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { getAllPosts, getIndexLogs } from '../../lib/db';
+import { getAllPostsAdmin, getIndexLogs } from '../../lib/db';
 import { DEFAULT_FEED_SOURCES } from '../../lib/feeds';
 import { AUTH_COOKIE_NAME, isAuthenticated } from '../../lib/auth';
 
@@ -11,8 +11,25 @@ if (!isAuthenticated(authCookie)) {
 }
 
 const db = (Astro.locals as any)?.runtime?.env?.DB;
-const posts = await getAllPosts(db);
+const posts = await getAllPostsAdmin(db);
 const logs = await getIndexLogs();
+
+// Prepare lightweight posts JSON for client-side pagination & instant search
+const serializedPosts = JSON.stringify(posts.map((p, idx) => ({
+  id: p.id,
+  index: idx + 1,
+  slug: p.slug,
+  title: p.title,
+  subtitle: p.subtitle || '',
+  category: p.category,
+  categoryLabel: p.categoryLabel || p.category,
+  badge: p.badge || '',
+  featuredImage: p.featuredImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=400&q=80',
+  authorName: p.author?.name || 'Staff Reporter',
+  publishedAt: p.publishedAt,
+  indexedInGoogle: p.indexedInGoogle ?? true,
+  sourceUrl: p.sourceUrl || '',
+})));
 ---
 
 <Layout
@@ -22,49 +39,68 @@ const logs = await getIndexLogs();
   <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6">
     
     <!-- Top Operations Banner -->
-    <div class="bg-zinc-950 text-white p-6 sm:p-8 rounded-xl mb-8 border-l-4 border-hollywood-red shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-      <div>
-        <div class="flex items-center gap-3">
-          <span class="relative flex h-3 w-3">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-          </span>
-          <span class="text-xs font-mono uppercase tracking-widest text-emerald-400 font-bold">
-            Live Ingestion & Edge D1 SQLite Connected
-          </span>
-          <span class="text-xs text-zinc-500">•</span>
-          <span class="text-xs font-mono text-zinc-400">User: <strong class="text-zinc-200">admin</strong></span>
+    <div class="bg-zinc-950 text-white p-6 sm:p-8 rounded-xl mb-8 border-l-4 border-hollywood-red shadow-lg">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div>
+          <div class="flex items-center gap-3">
+            <span class="relative flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </span>
+            <span class="text-xs font-mono uppercase tracking-widest text-emerald-400 font-bold">
+              Live Ingestion & Edge D1 SQLite Connected
+            </span>
+            <span class="text-xs text-zinc-500">•</span>
+            <span class="text-xs font-mono text-zinc-400">User: <strong class="text-zinc-200">admin</strong></span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-black font-headline tracking-wide uppercase mt-2">
+            Hollywood Time Operations Hub
+          </h1>
+          <p class="text-xs sm:text-sm text-zinc-400 font-sans mt-1">
+            Automated multi-source monitor, AI news rewriter, Google Indexing API publisher, and Cloudflare D1 editor.
+          </p>
         </div>
-        <h1 class="text-2xl sm:text-3xl font-black font-headline tracking-wide uppercase mt-2">
-          Hollywood Time Operations Hub
-        </h1>
-        <p class="text-xs sm:text-sm text-zinc-400 font-sans mt-1">
-          Automated multi-source monitor, AI news rewriter, Google Indexing API publisher, and Cloudflare D1 editor.
-        </p>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <button
+            id="btn-sync-now"
+            class="px-5 py-2.5 bg-hollywood-red hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-md transition flex items-center gap-2 cursor-pointer active:scale-95"
+          >
+            <span id="sync-spinner" class="hidden animate-spin">⟳</span>
+            <span>⚡ Sync & Auto-Rewrite Now</span>
+          </button>
+
+          <a
+            href="#manual-publish-section"
+            class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs uppercase tracking-wider rounded-lg transition"
+          >
+            ✍️ Write New Story
+          </a>
+
+          <a
+            href="/admin/logout"
+            class="px-3.5 py-2.5 bg-zinc-900 hover:bg-red-950/80 text-zinc-400 hover:text-red-400 font-bold text-xs uppercase tracking-wider rounded-lg border border-zinc-800 transition"
+            title="Sign out of Admin Session"
+          >
+            Logout ⇥
+          </a>
+        </div>
       </div>
 
-      <div class="flex flex-wrap items-center gap-3">
-        <button
-          id="btn-sync-now"
-          class="px-5 py-2.5 bg-hollywood-red hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-md transition flex items-center gap-2 cursor-pointer active:scale-95"
-        >
-          <span id="sync-spinner" class="hidden animate-spin">⟳</span>
-          <span>⚡ Sync & Auto-Rewrite Now</span>
-        </button>
-
-        <a
-          href="#manual-publish-section"
-          class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs uppercase tracking-wider rounded-lg transition"
-        >
-          ✍️ Write New Story
+      <!-- Quick Section Anchor Tabs -->
+      <div class="flex flex-wrap items-center gap-2 mt-5 pt-4 border-t border-zinc-800 text-xs font-mono">
+        <span class="text-zinc-500 mr-1 uppercase text-[10px] tracking-wider font-bold">Quick Jump:</span>
+        <a href="#stories-section" class="px-3 py-1 rounded bg-red-600/30 text-red-300 border border-red-500/40 hover:bg-red-600/50 font-bold transition">
+          📰 All Stories ({posts.length})
         </a>
-
-        <a
-          href="/admin/logout"
-          class="px-3.5 py-2.5 bg-zinc-900 hover:bg-red-950/80 text-zinc-400 hover:text-red-400 font-bold text-xs uppercase tracking-wider rounded-lg border border-zinc-800 transition"
-          title="Sign out of Admin Session"
-        >
-          Logout ⇥
+        <a href="#ai-fetch-section" class="px-3 py-1 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 font-medium transition">
+          ⚡ AI Fetch Engine
+        </a>
+        <a href="#manual-publish-section" class="px-3 py-1 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 font-medium transition">
+          ✍️ Manual Story
+        </a>
+        <a href="#logs-section" class="px-3 py-1 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 font-medium transition">
+          📈 Google Index Logs
         </a>
       </div>
     </div>
@@ -75,14 +111,14 @@ const logs = await getIndexLogs();
     <!-- Quick Stats Cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
       <div class="bg-white p-4 rounded-xl border border-zinc-200 shadow-xs">
-        <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold">Total Posts</div>
+        <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold">Total Posts in D1</div>
         <div class="text-2xl font-serif font-black text-zinc-950 mt-1">{posts.length}</div>
-        <div class="text-[10px] text-emerald-600 font-semibold mt-0.5">✓ D1 SQLite Synced</div>
+        <div class="text-[10px] text-emerald-600 font-semibold mt-0.5">✓ 100% Edge Synced & Paginated</div>
       </div>
       <div class="bg-white p-4 rounded-xl border border-zinc-200 shadow-xs">
         <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold">Categories</div>
         <div class="text-2xl font-serif font-black text-zinc-950 mt-1">7</div>
-        <div class="text-[10px] text-zinc-500 font-semibold mt-0.5">Latest 3 strictly per category</div>
+        <div class="text-[10px] text-zinc-500 font-semibold mt-0.5">Movies, TV, Music, Awards, etc.</div>
       </div>
       <div class="bg-white p-4 rounded-xl border border-zinc-200 shadow-xs">
         <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold">Auto-Post Cycle</div>
@@ -95,6 +131,238 @@ const logs = await getIndexLogs();
         <div class="text-[10px] text-blue-600 font-semibold mt-0.5">✓ Verified Tick Enabled</div>
       </div>
     </div>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION: All Published Editorial Stories with Full Pagination & Search -->
+    <!-- ========================================================================= -->
+    <section id="stories-section" class="bg-white border border-zinc-200 p-5 sm:p-6 rounded-xl shadow-xs mb-8">
+      
+      <!-- Section Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b-2 border-black pb-4 mb-4 gap-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-lg font-black font-headline uppercase tracking-wider text-zinc-950">
+              Published Editorial Stories Archive
+            </h2>
+            <span id="badge-total-count" class="px-2.5 py-0.5 bg-red-100 text-hollywood-red font-mono font-bold text-xs rounded-full border border-red-200">
+              {posts.length} Total Stories
+            </span>
+          </div>
+          <p class="text-xs text-zinc-500 mt-0.5">
+            Persisted permanently in Cloudflare D1 SQLite database. Fast client pagination, instant search, and direct actions.
+          </p>
+        </div>
+
+        <div class="text-xs text-zinc-500 font-mono">
+          Auto-pruning active: <span class="font-bold text-zinc-700">max 1,500 stories</span> (Free tier safe)
+        </div>
+      </div>
+
+      <!-- Controls Toolbar (Search, Filter, Per Page) -->
+      <div class="bg-zinc-50 border border-zinc-200 rounded-lg p-3 mb-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 text-xs">
+        <div class="flex flex-wrap items-center gap-2.5 flex-1">
+          
+          <!-- Search Input -->
+          <div class="relative flex-1 min-w-[220px]">
+            <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-zinc-400">
+              🔍
+            </span>
+            <input
+              type="text"
+              id="filter-search-input"
+              placeholder="Search by headline, author, keyword..."
+              class="w-full pl-8 pr-7 py-2 bg-white border border-zinc-300 rounded-md text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+            />
+            <button
+              id="btn-clear-search"
+              class="hidden absolute inset-y-0 right-0 pr-2.5 flex items-center text-zinc-400 hover:text-zinc-700 font-bold"
+              title="Clear search"
+            >
+              ✕
+            </button>
+          </div>
+
+          <!-- Category Filter Dropdown -->
+          <div class="min-w-[150px]">
+            <select
+              id="filter-category-select"
+              class="w-full py-2 px-3 bg-white border border-zinc-300 rounded-md text-xs text-zinc-800 font-medium focus:outline-none focus:border-red-500"
+            >
+              <option value="">All Categories ({posts.length})</option>
+              <option value="movies">Movies</option>
+              <option value="tv">TV</option>
+              <option value="music">Music</option>
+              <option value="awards">Awards</option>
+              <option value="business">Business</option>
+              <option value="style">Style</option>
+              <option value="culture">Culture</option>
+            </select>
+          </div>
+
+          <!-- Reset Filter Button -->
+          <button
+            id="btn-reset-filters"
+            class="px-3 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 font-bold rounded-md transition"
+            title="Reset all filters"
+          >
+            Reset
+          </button>
+        </div>
+
+        <!-- Per-Page Selector -->
+        <div class="flex items-center gap-2 self-end md:self-center font-mono">
+          <label for="filter-page-size" class="text-zinc-500 uppercase tracking-wider text-[11px] font-bold">
+            Per Page:
+          </label>
+          <select
+            id="filter-page-size"
+            class="py-1.5 px-2 bg-white border border-zinc-300 rounded-md text-xs text-zinc-800 font-bold focus:outline-none focus:border-red-500"
+          >
+            <option value="15" selected>15</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Delete Story Alert -->
+      <div id="delete-alert" class="hidden mb-4 p-3 rounded-lg border text-xs font-mono"></div>
+
+      <!-- Paginated Stories Table -->
+      <div class="overflow-x-auto border border-zinc-200 rounded-lg">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-zinc-100 text-zinc-700 uppercase font-bold text-[10px] tracking-wider border-b border-zinc-200">
+            <tr>
+              <th class="py-3 px-3 w-12 text-center">#</th>
+              <th class="py-3 px-3">Story Headline</th>
+              <th class="py-3 px-3 w-28">Category</th>
+              <th class="py-3 px-3 w-36">Byline</th>
+              <th class="py-3 px-3 w-32">Published</th>
+              <th class="py-3 px-3 w-28">Google Status</th>
+              <th class="py-3 px-3 w-32 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="stories-table-body" class="divide-y divide-zinc-100 font-sans">
+            <!-- SSR initial render of first 15 posts (seamless fallback before JS runs) -->
+            {posts.slice(0, 15).map((post, idx) => (
+              <tr class="hover:bg-zinc-50 transition" data-id={post.id}>
+                <td class="py-2.5 px-3 text-center font-mono text-[11px] text-zinc-400">
+                  {idx + 1}
+                </td>
+                <td class="py-2.5 px-3">
+                  <div class="flex items-center gap-3">
+                    <img
+                      src={post.featuredImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=400&q=80'}
+                      alt=""
+                      class="w-10 h-10 rounded object-cover flex-shrink-0 bg-zinc-100 border border-zinc-200"
+                      loading="lazy"
+                    />
+                    <div class="min-w-0 flex-1">
+                      <a
+                        href={`/news/${post.slug}`}
+                        target="_blank"
+                        class="font-serif font-bold text-zinc-950 hover:text-hollywood-red transition line-clamp-1 text-xs sm:text-sm"
+                      >
+                        {post.title}
+                      </a>
+                      <div class="text-[11px] text-zinc-400 font-mono truncate mt-0.5">
+                        /news/{post.slug}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td class="py-2.5 px-3">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-zinc-100 text-zinc-700">
+                    {post.categoryLabel || post.category}
+                  </span>
+                </td>
+                <td class="py-2.5 px-3 text-zinc-600">
+                  <span class="font-medium text-zinc-800 flex items-center gap-1">
+                    {post.author?.name || 'Staff Reporter'}
+                    <span class="w-3 h-3 rounded-full bg-blue-600 text-white inline-flex items-center justify-center text-[7px] font-black">✓</span>
+                  </span>
+                </td>
+                <td class="py-2.5 px-3 font-mono text-[11px] text-zinc-500 whitespace-nowrap">
+                  {new Date(post.publishedAt).toLocaleDateString()}
+                </td>
+                <td class="py-2.5 px-3">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800">
+                    ✓ Indexed
+                  </span>
+                </td>
+                <td class="py-2.5 px-3 text-right whitespace-nowrap">
+                  <a
+                    href={`/news/${post.slug}`}
+                    target="_blank"
+                    class="inline-block px-2 py-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-[11px] rounded transition mr-1"
+                  >
+                    View ↗
+                  </a>
+                  <button
+                    class="btn-delete-story inline-block px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] rounded transition"
+                    data-id={post.id}
+                    data-title={post.title}
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Navigation Footer -->
+      <div class="mt-4 pt-3 border-t border-zinc-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <!-- Status Counter -->
+        <div id="pagination-status" class="text-xs text-zinc-600 font-mono">
+          Showing <span id="pag-start" class="font-bold text-zinc-900">1</span>–<span id="pag-end" class="font-bold text-zinc-900">{Math.min(15, posts.length)}</span> of <span id="pag-total" class="font-bold text-zinc-900">{posts.length}</span> stories
+          (Page <span id="pag-current" class="font-bold text-hollywood-red">1</span> of <span id="pag-max" class="font-bold text-zinc-900">{Math.ceil(posts.length / 15)}</span>)
+        </div>
+
+        <!-- Page Buttons -->
+        <div class="flex items-center gap-1 font-mono text-xs select-none">
+          <button
+            id="btn-pag-first"
+            class="px-2.5 py-1.5 rounded border border-zinc-300 bg-white hover:bg-zinc-100 disabled:opacity-40 disabled:pointer-events-none transition"
+            title="First Page"
+          >
+            « First
+          </button>
+          <button
+            id="btn-pag-prev"
+            class="px-2.5 py-1.5 rounded border border-zinc-300 bg-white hover:bg-zinc-100 disabled:opacity-40 disabled:pointer-events-none transition"
+            title="Previous Page"
+          >
+            ‹ Prev
+          </button>
+
+          <!-- Numbered Buttons Container -->
+          <div id="pagination-numbers" class="flex items-center gap-1">
+            <!-- Populated dynamically by client JS -->
+          </div>
+
+          <button
+            id="btn-pag-next"
+            class="px-2.5 py-1.5 rounded border border-zinc-300 bg-white hover:bg-zinc-100 disabled:opacity-40 disabled:pointer-events-none transition"
+            title="Next Page"
+          >
+            Next ›
+          </button>
+          <button
+            id="btn-pag-last"
+            class="px-2.5 py-1.5 rounded border border-zinc-300 bg-white hover:bg-zinc-100 disabled:opacity-40 disabled:pointer-events-none transition"
+            title="Last Page"
+          >
+            Last »
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Raw Posts Data for Instant Client Paging -->
+    <script id="posts-raw-data" type="application/json" set:html={serializedPosts}></script>
 
     <!-- AI News Fetch & Instant Rewriter Section -->
     <section id="ai-fetch-section" class="bg-gradient-to-br from-zinc-900 to-zinc-950 text-white border border-zinc-800 p-6 sm:p-7 rounded-xl shadow-md mb-8">
@@ -152,90 +420,116 @@ const logs = await getIndexLogs();
           </div>
         </div>
 
-        <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-zinc-800/80">
-          <div class="text-[11px] text-zinc-400 font-mono flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span>Supports direct URLs & raw topics</span>
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div class="md:col-span-8">
+            <label class="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5">
+              Target Headline / Angle Hint (Optional)
+            </label>
+            <input
+              type="text"
+              id="ai-fetch-hint"
+              placeholder="Optional: Focus on box office impact, awards buzz, or executive moves..."
+              class="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-zinc-800/90 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-red-500 font-sans"
+            />
           </div>
 
-          <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div class="md:col-span-4 flex items-end gap-2">
             <button
               type="button"
-              id="btn-ai-fill"
-              class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-bold text-xs uppercase tracking-wider rounded-lg border border-zinc-700 transition flex items-center gap-2 cursor-pointer active:scale-95"
+              id="btn-ai-fetch-fill"
+              class="flex-1 py-2.5 px-3 bg-zinc-700 hover:bg-zinc-600 text-white font-bold text-xs uppercase tracking-wider rounded-lg transition text-center cursor-pointer flex items-center justify-center gap-1.5"
             >
-              <span id="spinner-ai-fill" class="hidden animate-spin">⟳</span>
-              <span>📝 AI Fetch & Fill Form</span>
+              <span id="ai-fill-spinner" class="hidden animate-spin">⟳</span>
+              <span>Fill Form Below</span>
             </button>
 
             <button
               type="button"
-              id="btn-ai-autopublish"
-              class="px-5 py-2.5 bg-hollywood-red hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-md transition flex items-center gap-2 cursor-pointer active:scale-95"
+              id="btn-ai-fetch-publish"
+              class="flex-1 py-2.5 px-3 bg-hollywood-red hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow transition text-center cursor-pointer flex items-center justify-center gap-1.5"
             >
-              <span id="spinner-ai-pub" class="hidden animate-spin">⟳</span>
-              <span>🚀 AI Fetch & 1-Click Publish Live</span>
+              <span id="ai-pub-spinner" class="hidden animate-spin">⟳</span>
+              <span>⚡ 1-Click Publish</span>
             </button>
           </div>
         </div>
 
-        <div id="ai-fetch-alert" class="hidden p-3.5 rounded-lg text-xs font-medium"></div>
+        <div id="ai-fetch-alert" class="hidden p-4 rounded-xl border text-xs font-mono transition"></div>
       </div>
     </section>
 
-    <!-- Manual Story Publishing Form (Direct to D1) -->
-    <section id="manual-publish-section" class="bg-white border border-zinc-200 p-6 rounded-xl shadow-xs mb-10">
-      <div class="border-b border-zinc-200 pb-3 mb-5 flex items-center justify-between">
-        <div>
-          <h2 class="text-base font-black font-headline uppercase tracking-wider text-zinc-950">
-            ✍️ Edit & Publish Story (Direct to Cloudflare D1)
-          </h2>
-          <p class="text-xs text-zinc-500 font-sans">
-            Write a custom human-journalism article or review AI-fetched content before saving to D1 SQLite.
+    <!-- Manual Story Publishing & Google Activity Log Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
+      
+      <!-- Left: Manual Story Publishing Section -->
+      <section id="manual-publish-section" class="lg:col-span-7 bg-white border border-zinc-200 p-6 rounded-xl shadow-xs">
+        <div class="border-b-2 border-black pb-3 mb-5">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 bg-zinc-900 text-white text-[10px] font-black uppercase tracking-widest rounded">
+              D1 Database
+            </span>
+            <h2 class="text-base font-black font-headline uppercase tracking-wider text-zinc-950">
+              ✍️ Write & Publish Editorial Story
+            </h2>
+          </div>
+          <p class="text-xs text-zinc-500 mt-1">
+            Publish directly to Cloudflare edge SQLite and instantly submit to Google Indexing API.
           </p>
         </div>
-        <span class="px-2.5 py-1 bg-red-50 text-red-700 text-[10px] font-bold uppercase rounded-md border border-red-200">
-          Instant Live
-        </span>
-      </div>
 
-      <form id="form-manual-post" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-          <div class="md:col-span-8">
+        <div id="manual-post-alert" class="hidden mb-4 p-4 rounded-xl border text-xs"></div>
+
+        <form id="form-manual-post" class="space-y-4">
+          <div>
             <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
-              Article Title *
+              Headline Title *
             </label>
             <input
               type="text"
               id="post-title"
               required
-              placeholder="e.g. Christopher Nolan Sets Next Epic Feature at Universal"
-              class="w-full px-3.5 py-2 text-sm border border-zinc-300 rounded-lg focus:outline-none focus:border-red-600 font-serif"
+              placeholder="e.g. 'Oppenheimer' Dominates BAFTA Awards With 7 Major Wins"
+              class="w-full px-3 py-2 text-xs border border-zinc-300 rounded-md focus:outline-none focus:border-red-500 font-serif font-bold text-zinc-950 text-sm"
             />
           </div>
 
-          <div class="md:col-span-4">
-            <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
-              Category *
-            </label>
-            <select
-              id="post-category"
-              required
-              class="w-full px-3 py-2 text-sm border border-zinc-300 rounded-lg focus:outline-none focus:border-red-600 bg-white"
-            >
-              <option value="movies">Movies</option>
-              <option value="tv">TV</option>
-              <option value="music">Music</option>
-              <option value="awards">Awards</option>
-              <option value="business">Business</option>
-              <option value="style">Style</option>
-              <option value="culture">Culture</option>
-            </select>
-          </div>
-        </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                Editorial Category *
+              </label>
+              <select
+                id="post-category"
+                required
+                class="w-full px-3 py-2 text-xs border border-zinc-300 rounded-md focus:outline-none focus:border-red-500"
+              >
+                <option value="movies">Movies</option>
+                <option value="tv">TV</option>
+                <option value="music">Music</option>
+                <option value="awards">Awards</option>
+                <option value="business">Business</option>
+                <option value="style">Style</option>
+                <option value="culture">Culture</option>
+              </select>
+            </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-          <div class="md:col-span-6">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                Verified Byline Reporter
+              </label>
+              <select
+                id="post-author"
+                class="w-full px-3 py-2 text-xs border border-zinc-300 rounded-md focus:outline-none focus:border-red-500"
+              >
+                <option value="Sarah Jenkins">Sarah Jenkins (Film Editor ✓)</option>
+                <option value="Marcus Vance">Marcus Vance (Box Office Chief ✓)</option>
+                <option value="Elena Rostova">Elena Rostova (Television Bureau ✓)</option>
+                <option value="Devon Sterling">Devon Sterling (Music Critic ✓)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
             <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
               Featured Image URL
             </label>
@@ -243,258 +537,473 @@ const logs = await getIndexLogs();
               type="url"
               id="post-image"
               placeholder="https://images.unsplash.com/photo-..."
-              class="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-lg focus:outline-none focus:border-red-600 font-mono"
-            />
-          </div>
-
-          <div class="md:col-span-6">
-            <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
-              Author (Title Case with ✓)
-            </label>
-            <select
-              id="post-author"
-              class="w-full px-3 py-2 text-sm border border-zinc-300 rounded-lg focus:outline-none focus:border-red-600 bg-white"
-            >
-              <option value="A.K. Singh">A.K. Singh (Editor-in-Chief)</option>
-              <option value="Bidyanand">Bidyanand (Film & TV Critic)</option>
-              <option value="S.K. Singh">S.K. Singh (Music & Awards Editor)</option>
-              <option value="N.K. Mishra">N.K. Mishra (Style & Culture Correspondent)</option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
-            Article Summary / Excerpt *
-          </label>
-          <input
-            type="text"
-            id="post-excerpt"
-            required
-            placeholder="A compelling 2-sentence editorial overview of the breaking story..."
-            class="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-lg focus:outline-none focus:border-red-600"
-          />
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
-            Full Editorial Article Content (HTML / Longform) *
-          </label>
-          <textarea
-            id="post-content"
-            rows="6"
-            required
-            placeholder="<p class='lead'>Opening drop cap paragraph...</p><h2>Subheading</h2><p>Analysis paragraph...</p><blockquote>Quote</blockquote>"
-            class="w-full px-3.5 py-2.5 text-xs font-mono border border-zinc-300 rounded-lg focus:outline-none focus:border-red-600"
-          ></textarea>
-        </div>
-
-        <div class="flex items-center justify-end gap-3 pt-2">
-          <button
-            type="submit"
-            id="btn-publish-submit"
-            class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-sm transition cursor-pointer"
-          >
-            Publish Live to Cloudflare D1 →
-          </button>
-        </div>
-      </form>
-      <div id="manual-post-alert" class="hidden mt-4 p-3 rounded-lg text-xs font-medium"></div>
-    </section>
-
-    <!-- Monitored Sources Grid -->
-    <section class="mb-10">
-      <div class="flex items-center justify-between border-b-2 border-black pb-2 mb-4">
-        <h2 class="text-base font-black font-headline uppercase tracking-wider text-black">
-          Monitored Sources (4 Feeds)
-        </h2>
-        <span class="text-xs font-mono text-zinc-500 font-semibold">Auto-Polling Every 5 Minutes</span>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {DEFAULT_FEED_SOURCES.map((src) => (
-          <div class="border border-zinc-200 bg-white p-4 rounded-xl shadow-xs flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between text-[11px] mb-2">
-                <span class="font-bold text-hollywood-red uppercase tracking-wider">{src.type.toUpperCase()}</span>
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">ACTIVE</span>
-              </div>
-              <h3 class="text-sm font-bold text-zinc-950 font-serif line-clamp-2 mb-1">{src.name}</h3>
-              <p class="text-[11px] text-zinc-500 truncate font-mono">{src.url}</p>
-            </div>
-            <div class="mt-3 pt-2 border-t border-zinc-100 flex items-center justify-between text-[10px] text-zinc-400">
-              <span>Category: <strong>{src.categoryDefault}</strong></span>
-              <a href={src.url} target="_blank" class="hover:text-black font-bold">Inspect ↗</a>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-
-    <!-- Google Search Console & Indexing Section -->
-    <section class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10">
-      <!-- Left: Manual Indexing Submitter -->
-      <div class="lg:col-span-5 bg-zinc-50 border border-zinc-200 p-5 rounded-xl">
-        <div class="border-b border-zinc-200 pb-2 mb-4">
-          <h2 class="text-sm font-black font-headline uppercase tracking-wider text-zinc-950">
-            Google Indexing API Trigger
-          </h2>
-          <p class="text-xs text-zinc-500 font-sans">Instant URL notification for Googlebot fast indexing</p>
-        </div>
-
-        <form id="form-index-url" class="space-y-4">
-          <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
-              Article URL to Index
-            </label>
-            <input
-              type="url"
-              id="input-index-url"
-              placeholder="https://hollywoodtime.pages.dev/news/article-slug"
-              required
-              class="w-full px-3 py-2 text-xs border border-zinc-300 rounded-lg focus:outline-none focus:border-red-600 font-mono bg-white"
+              class="w-full px-3 py-2 text-xs border border-zinc-300 rounded-md focus:outline-none focus:border-red-500 font-mono"
             />
           </div>
 
           <div>
             <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
-              Google Cloud Service Account JSON (Optional)
+              Story Excerpt (Lead Paragraph)
             </label>
             <textarea
-              id="input-sa-json"
-              rows="3"
-              placeholder='{"type": "service_account", "client_email": "...", "private_key": "..."}'
-              class="w-full px-3 py-2 text-[11px] border border-zinc-300 rounded-lg font-mono focus:outline-none focus:border-red-600 bg-white"
+              id="post-excerpt"
+              rows="2"
+              placeholder="Key hook sentence displayed on homepage cards..."
+              class="w-full px-3 py-2 text-xs border border-zinc-300 rounded-md focus:outline-none focus:border-red-500"
             ></textarea>
-            <p class="text-[10px] text-zinc-500 mt-1">
-              If omitted, simulated notification & Google News sitemap ping are executed automatically.
-            </p>
           </div>
 
-          <button
-            type="submit"
-            class="w-full py-2.5 bg-zinc-950 hover:bg-zinc-800 text-white font-bold text-xs uppercase tracking-wider rounded-lg transition cursor-pointer"
-          >
-            Submit URL to Google Indexing
-          </button>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+              Full Article Content (HTML / Markdown formatted) *
+            </label>
+            <textarea
+              id="post-content"
+              rows="7"
+              required
+              placeholder="Full article paragraphs with background, quotes, and analysis..."
+              class="w-full px-3 py-2 text-xs border border-zinc-300 rounded-md focus:outline-none focus:border-red-500 font-sans"
+            ></textarea>
+          </div>
+
+          <div class="pt-2">
+            <button
+              type="submit"
+              id="btn-publish-submit"
+              class="w-full py-3 bg-hollywood-red hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow transition cursor-pointer"
+            >
+              🚀 Publish Story to Live Site & Ping Google
+            </button>
+          </div>
         </form>
-      </div>
+      </section>
 
       <!-- Right: Live Indexing Audit Logs -->
-      <div class="lg:col-span-7 bg-white border border-zinc-200 p-5 rounded-xl">
-        <div class="flex items-center justify-between border-b border-zinc-200 pb-2 mb-4">
-          <h2 class="text-sm font-black font-headline uppercase tracking-wider text-zinc-950">
-            Google Indexing Activity Log
-          </h2>
-          <span class="text-[11px] font-mono text-zinc-400">Total: {logs.length}</span>
+      <section id="logs-section" class="lg:col-span-5 bg-white border border-zinc-200 p-6 rounded-xl shadow-xs">
+        <div class="flex items-center justify-between border-b-2 border-black pb-3 mb-4">
+          <div>
+            <h2 class="text-base font-black font-headline uppercase tracking-wider text-zinc-950">
+              📈 Google Index Activity Log
+            </h2>
+            <p class="text-xs text-zinc-500">Live indexing status & audit responses.</p>
+          </div>
+          <span class="text-xs font-mono font-bold text-zinc-500">Total: {logs.length}</span>
         </div>
 
-        <div class="overflow-y-auto max-h-[300px] divide-y divide-zinc-100 text-xs">
-          {logs.map((log) => (
-            <div class="py-2.5 flex items-start justify-between gap-3">
-              <div class="space-y-0.5">
-                <div class="flex items-center gap-2">
-                  <span class={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase font-mono ${
-                    log.status === 'SUCCESS' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {log.status} ({log.statusCode || 200})
-                  </span>
-                  <span class="font-mono text-zinc-400 text-[10px]">{log.action}</span>
-                </div>
-                <p class="font-mono text-zinc-950 font-semibold truncate max-w-sm sm:max-w-md">{log.url}</p>
-                <p class="text-[11px] text-zinc-500">{log.responseMessage}</p>
-              </div>
-              <time class="text-[10px] text-zinc-400 whitespace-nowrap font-mono">
-                {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-              </time>
+        <div class="overflow-y-auto max-h-[460px] divide-y divide-zinc-100 text-xs">
+          {logs.length === 0 ? (
+            <div class="py-8 text-center text-zinc-400 font-mono text-xs">
+              No recent index activities recorded yet. Trigger a sync to record logs.
             </div>
-          ))}
+          ) : (
+            logs.map((log) => (
+              <div class="py-2.5 flex items-start justify-between gap-3">
+                <div class="space-y-0.5">
+                  <div class="flex items-center gap-2">
+                    <span class={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase font-mono ${
+                      log.status === 'SUCCESS' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {log.status} ({log.statusCode || 200})
+                    </span>
+                    <span class="font-mono text-zinc-400 text-[10px]">{log.action}</span>
+                  </div>
+                  <p class="font-mono text-zinc-950 font-semibold truncate max-w-xs">{log.url}</p>
+                  <p class="text-[11px] text-zinc-500">{log.responseMessage}</p>
+                </div>
+                <time class="text-[10px] text-zinc-400 whitespace-nowrap font-mono">
+                  {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </time>
+              </div>
+            ))
+          )}
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
 
-    <!-- Published Articles Table -->
-    <section class="bg-white border border-zinc-200 p-5 rounded-xl shadow-xs">
-      <div class="flex items-center justify-between border-b-2 border-black pb-3 mb-4">
-        <div>
-          <h2 class="text-base font-black font-headline uppercase tracking-wider text-zinc-950">
-            Published Editorial Stories
-          </h2>
-          <p class="text-xs text-zinc-500">Persisted permanently in Cloudflare D1 SQLite database.</p>
-        </div>
-        <span class="text-xs font-mono font-bold text-hollywood-red">{posts.length} Total Stories</span>
-      </div>
-
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-xs">
-          <thead class="bg-zinc-50 text-zinc-600 uppercase font-bold text-[10px] tracking-wider border-b border-zinc-200">
-            <tr>
-              <th class="py-2.5 px-3">Story Title</th>
-              <th class="py-2.5 px-3">Category</th>
-              <th class="py-2.5 px-3">Byline</th>
-              <th class="py-2.5 px-3">Published</th>
-              <th class="py-2.5 px-3">Google Status</th>
-              <th class="py-2.5 px-3 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-zinc-100">
-            {posts.map((post) => (
-              <tr class="hover:bg-zinc-50 transition">
-                <td class="py-2.5 px-3 font-serif font-bold text-zinc-950 max-w-md">
-                  <a href={`/news/${post.slug}`} target="_blank" class="hover:text-hollywood-red transition line-clamp-1">
-                    {post.title}
-                  </a>
-                </td>
-                <td class="py-2.5 px-3">
-                  <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-zinc-100 text-zinc-700">
-                    {post.categoryLabel}
-                  </span>
-                </td>
-                <td class="py-2.5 px-3 text-zinc-600">
-                  <span class="font-medium text-zinc-800 flex items-center gap-1">
-                    {post.author.name}
-                    <span class="w-3 h-3 rounded-full bg-blue-600 text-white inline-flex items-center justify-center text-[7px] font-black">✓</span>
-                  </span>
-                </td>
-                <td class="py-2.5 px-3 font-mono text-[11px] text-zinc-500">
-                  {new Date(post.publishedAt).toLocaleDateString()}
-                </td>
-                <td class="py-2.5 px-3">
-                  <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800">
-                    ✓ Indexed
-                  </span>
-                </td>
-                <td class="py-2.5 px-3 text-right">
-                  <a
-                    href={`/news/${post.slug}`}
-                    target="_blank"
-                    class="text-hollywood-red font-bold hover:underline"
-                  >
-                    View Story ↗
-                  </a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
   </div>
 
-  <!-- Interactive JavaScript for Live Auto-Sync & Manual Story Publishing -->
+  <!-- Interactive JavaScript for Live Auto-Sync, AI Fetch, Story Publishing & Paging -->
   <script is:inline>
+    // ==========================================
+    // 1. DATA INITIALIZATION & PAGINATION ENGINE
+    // ==========================================
+    const rawDataScript = document.getElementById('posts-raw-data');
+    let allPosts = [];
+    try {
+      allPosts = JSON.parse(rawDataScript?.textContent || '[]');
+    } catch (e) {
+      console.error('Failed to parse posts data:', e);
+      allPosts = [];
+    }
+
+    let filteredPosts = [...allPosts];
+    let currentPage = 1;
+    let pageSize = 15;
+
+    // Check URL query parameters for initial state
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialPage = parseInt(urlParams.get('page') || '1', 10);
+    const initialCategory = urlParams.get('category') || '';
+    const initialSearch = urlParams.get('search') || '';
+
+    if (!isNaN(initialPage) && initialPage > 0) currentPage = initialPage;
+
+    // DOM Elements for Filtering & Paging
+    const searchInput = document.getElementById('filter-search-input');
+    const clearSearchBtn = document.getElementById('btn-clear-search');
+    const categorySelect = document.getElementById('filter-category-select');
+    const pageSizeSelect = document.getElementById('filter-page-size');
+    const resetFiltersBtn = document.getElementById('btn-reset-filters');
+    const tableBody = document.getElementById('stories-table-body');
+    const deleteAlert = document.getElementById('delete-alert');
+    const badgeTotalCount = document.getElementById('badge-total-count');
+
+    // Pagination DOM Elements
+    const pagStart = document.getElementById('pag-start');
+    const pagEnd = document.getElementById('pag-end');
+    const pagTotal = document.getElementById('pag-total');
+    const pagCurrent = document.getElementById('pag-current');
+    const pagMax = document.getElementById('pag-max');
+    const btnFirst = document.getElementById('btn-pag-first');
+    const btnPrev = document.getElementById('btn-pag-prev');
+    const btnNext = document.getElementById('btn-pag-next');
+    const btnLast = document.getElementById('btn-pag-last');
+    const pagNumbersContainer = document.getElementById('pagination-numbers');
+
+    if (initialCategory && categorySelect) categorySelect.value = initialCategory;
+    if (initialSearch && searchInput) {
+      searchInput.value = initialSearch;
+      clearSearchBtn?.classList.remove('hidden');
+    }
+
+    function applyFilters() {
+      const q = (searchInput?.value || '').trim().toLowerCase();
+      const cat = (categorySelect?.value || '').trim().toLowerCase();
+
+      filteredPosts = allPosts.filter(p => {
+        const matchesQuery = !q ||
+          p.title.toLowerCase().includes(q) ||
+          p.slug.toLowerCase().includes(q) ||
+          p.authorName.toLowerCase().includes(q);
+        const matchesCategory = !cat || p.category.toLowerCase() === cat;
+        return matchesQuery && matchesCategory;
+      });
+
+      const totalPages = Math.max(1, Math.ceil(filteredPosts.length / pageSize));
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      renderTable();
+      renderPagination();
+      updateUrlState();
+    }
+
+    function updateUrlState() {
+      const params = new URLSearchParams();
+      if (currentPage > 1) params.set('page', currentPage.toString());
+      if (categorySelect?.value) params.set('category', categorySelect.value);
+      if (searchInput?.value?.trim()) params.set('search', searchInput.value.trim());
+
+      const queryStr = params.toString();
+      const newUrl = queryStr ? `${window.location.pathname}?${queryStr}` : window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
+
+    function renderTable() {
+      if (!tableBody) return;
+
+      const startIndex = (currentPage - 1) * pageSize;
+      const endIndex = Math.min(startIndex + pageSize, filteredPosts.length);
+      const pageItems = filteredPosts.slice(startIndex, endIndex);
+
+      if (pageItems.length === 0) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="7" class="py-12 text-center text-zinc-500 font-mono">
+              <div class="text-2xl mb-1">🔍</div>
+              <div class="font-bold text-zinc-800">No stories found</div>
+              <div class="text-xs text-zinc-400 mt-1">Try changing your search term or category filter.</div>
+              <button onclick="document.getElementById('btn-reset-filters').click()" class="mt-3 px-3 py-1.5 bg-zinc-900 text-white rounded text-xs font-sans font-bold hover:bg-hollywood-red transition">
+                Reset Filters
+              </button>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tableBody.innerHTML = pageItems.map((post, idx) => {
+        const itemNumber = startIndex + idx + 1;
+        const pubDate = new Date(post.publishedAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+        const fallbackImg = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=400&q=80';
+        const imgUrl = post.featuredImage || fallbackImg;
+
+        return `
+          <tr class="hover:bg-zinc-50 transition" data-id="${post.id}">
+            <td class="py-2.5 px-3 text-center font-mono text-[11px] text-zinc-400">
+              ${itemNumber}
+            </td>
+            <td class="py-2.5 px-3">
+              <div class="flex items-center gap-3">
+                <img
+                  src="${imgUrl}"
+                  alt=""
+                  class="w-10 h-10 rounded object-cover flex-shrink-0 bg-zinc-100 border border-zinc-200"
+                  loading="lazy"
+                  onerror="this.src='${fallbackImg}'"
+                />
+                <div class="min-w-0 flex-1">
+                  <a
+                    href="/news/${post.slug}"
+                    target="_blank"
+                    class="font-serif font-bold text-zinc-950 hover:text-hollywood-red transition line-clamp-1 text-xs sm:text-sm"
+                    title="${post.title}"
+                  >
+                    ${post.title}
+                  </a>
+                  <div class="text-[11px] text-zinc-400 font-mono truncate mt-0.5">
+                    /news/${post.slug}
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td class="py-2.5 px-3">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-zinc-100 text-zinc-700">
+                ${post.categoryLabel || post.category}
+              </span>
+            </td>
+            <td class="py-2.5 px-3 text-zinc-600">
+              <span class="font-medium text-zinc-800 flex items-center gap-1">
+                ${post.authorName}
+                <span class="w-3 h-3 rounded-full bg-blue-600 text-white inline-flex items-center justify-center text-[7px] font-black">✓</span>
+              </span>
+            </td>
+            <td class="py-2.5 px-3 font-mono text-[11px] text-zinc-500 whitespace-nowrap">
+              ${pubDate}
+            </td>
+            <td class="py-2.5 px-3">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800">
+                ✓ Indexed
+              </span>
+            </td>
+            <td class="py-2.5 px-3 text-right whitespace-nowrap">
+              <a
+                href="/news/${post.slug}"
+                target="_blank"
+                class="inline-block px-2 py-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-[11px] rounded transition mr-1"
+              >
+                View ↗
+              </a>
+              <button
+                class="btn-delete-story inline-block px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] rounded transition cursor-pointer"
+                data-id="${post.id}"
+                data-title="${encodeURIComponent(post.title)}"
+              >
+                Delete
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      // Attach delete event listeners
+      document.querySelectorAll('.btn-delete-story').forEach(btn => {
+        btn.addEventListener('click', handleDeleteStory);
+      });
+    }
+
+    function renderPagination() {
+      const totalItems = filteredPosts.length;
+      const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+      const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+      const endIndex = Math.min(currentPage * pageSize, totalItems);
+
+      if (pagStart) pagStart.textContent = startIndex.toString();
+      if (pagEnd) pagEnd.textContent = endIndex.toString();
+      if (pagTotal) pagTotal.textContent = totalItems.toString();
+      if (pagCurrent) pagCurrent.textContent = currentPage.toString();
+      if (pagMax) pagMax.textContent = totalPages.toString();
+
+      if (btnFirst) btnFirst.disabled = currentPage <= 1;
+      if (btnPrev) btnPrev.disabled = currentPage <= 1;
+      if (btnNext) btnNext.disabled = currentPage >= totalPages;
+      if (btnLast) btnLast.disabled = currentPage >= totalPages;
+
+      if (!pagNumbersContainer) return;
+      pagNumbersContainer.innerHTML = '';
+
+      // Generate smart page numbers window (e.g. 1, 2 ... 5, 6, 7 ... 10)
+      const pageNumbers = [];
+      const delta = 2; // Pages on each side of currentPage
+
+      for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
+          pageNumbers.push(i);
+        } else if (pageNumbers[pageNumbers.length - 1] !== '...') {
+          pageNumbers.push('...');
+        }
+      }
+
+      pageNumbers.forEach(p => {
+        if (p === '...') {
+          const span = document.createElement('span');
+          span.className = 'px-1.5 py-1 text-zinc-400 font-mono';
+          span.textContent = '...';
+          pagNumbersContainer.appendChild(span);
+        } else {
+          const btn = document.createElement('button');
+          btn.className = p === currentPage
+            ? 'px-2.5 py-1.5 rounded font-bold bg-hollywood-red text-white transition'
+            : 'px-2.5 py-1.5 rounded border border-zinc-300 bg-white hover:bg-zinc-100 text-zinc-800 transition';
+          btn.textContent = p.toString();
+          btn.addEventListener('click', () => {
+            currentPage = p;
+            renderTable();
+            renderPagination();
+            updateUrlState();
+            document.getElementById('stories-section')?.scrollIntoView({ behavior: 'smooth' });
+          });
+          pagNumbersContainer.appendChild(btn);
+        }
+      });
+    }
+
+    // Pagination Click Listeners
+    btnFirst?.addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage = 1;
+        renderTable();
+        renderPagination();
+        updateUrlState();
+        document.getElementById('stories-section')?.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+
+    btnPrev?.addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderTable();
+        renderPagination();
+        updateUrlState();
+        document.getElementById('stories-section')?.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+
+    btnNext?.addEventListener('click', () => {
+      const totalPages = Math.ceil(filteredPosts.length / pageSize);
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderTable();
+        renderPagination();
+        updateUrlState();
+        document.getElementById('stories-section')?.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+
+    btnLast?.addEventListener('click', () => {
+      const totalPages = Math.ceil(filteredPosts.length / pageSize);
+      if (currentPage < totalPages) {
+        currentPage = totalPages;
+        renderTable();
+        renderPagination();
+        updateUrlState();
+        document.getElementById('stories-section')?.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+
+    // Search and Filter Listeners
+    searchInput?.addEventListener('input', () => {
+      clearSearchBtn?.classList.toggle('hidden', !searchInput.value);
+      currentPage = 1;
+      applyFilters();
+    });
+
+    clearSearchBtn?.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      clearSearchBtn.classList.add('hidden');
+      currentPage = 1;
+      applyFilters();
+    });
+
+    categorySelect?.addEventListener('change', () => {
+      currentPage = 1;
+      applyFilters();
+    });
+
+    pageSizeSelect?.addEventListener('change', () => {
+      pageSize = parseInt(pageSizeSelect.value, 10) || 15;
+      currentPage = 1;
+      applyFilters();
+    });
+
+    resetFiltersBtn?.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      clearSearchBtn?.classList.add('hidden');
+      if (categorySelect) categorySelect.value = '';
+      if (pageSizeSelect) pageSizeSelect.value = '15';
+      pageSize = 15;
+      currentPage = 1;
+      applyFilters();
+    });
+
+    // Delete Story Handler
+    async function handleDeleteStory(e) {
+      const btn = e.currentTarget;
+      const id = btn.getAttribute('data-id');
+      const title = decodeURIComponent(btn.getAttribute('data-title') || 'this story');
+
+      if (!confirm(`Are you sure you want to permanently delete this story?\n\n"${title}"`)) {
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '...';
+
+      try {
+        const res = await fetch('/api/posts', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ id }),
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          if (deleteAlert) {
+            deleteAlert.classList.remove('hidden');
+            deleteAlert.className = 'mb-4 p-3 rounded-lg border text-xs font-mono bg-emerald-50 border-emerald-300 text-emerald-800';
+            deleteAlert.textContent = `✓ Story deleted successfully: "${title}"`;
+            setTimeout(() => deleteAlert.classList.add('hidden'), 5000);
+          }
+
+          // Remove from local arrays
+          allPosts = allPosts.filter(p => p.id !== id);
+          if (badgeTotalCount) badgeTotalCount.textContent = `${allPosts.length} Total Stories`;
+          applyFilters();
+        } else {
+          alert(`Failed to delete story: ${data.error || 'Unknown error'}`);
+          btn.disabled = false;
+          btn.textContent = 'Delete';
+        }
+      } catch (err) {
+        alert(`Delete error: ${err.message}`);
+        btn.disabled = false;
+        btn.textContent = 'Delete';
+      }
+    }
+
+    // Initialize pagination on load
+    applyFilters();
+
+    // ==========================================
+    // 2. LIVE AUTO-SYNC & EDITORIAL SCRIPTS
+    // ==========================================
     const btnSync = document.getElementById('btn-sync-now');
     const syncSpinner = document.getElementById('sync-spinner');
     const syncAlert = document.getElementById('sync-alert');
-    const formIndex = document.getElementById('form-index-url');
-    const inputUrl = document.getElementById('input-index-url');
-    const inputSa = document.getElementById('input-sa-json');
     const formManual = document.getElementById('form-manual-post');
     const manualAlert = document.getElementById('manual-post-alert');
-
-    // Restore saved SA json if available
-    const savedSa = localStorage.getItem('ht_service_account');
-    if (savedSa && inputSa) inputSa.value = savedSa;
 
     // 1-Click Sync Trigger
     btnSync?.addEventListener('click', async () => {
@@ -509,9 +1018,6 @@ const logs = await getIndexLogs();
             'Content-Type': 'application/json',
             'Authorization': 'Bearer hollywoodtime_secret_key_2026'
           },
-          body: JSON.stringify({
-            serviceAccountJson: inputSa?.value || undefined,
-          }),
         });
 
         const data = await res.json();
@@ -524,7 +1030,7 @@ const logs = await getIndexLogs();
             <div class="mt-2 text-[11px]">
               ${data.createdPosts && data.createdPosts.length > 0
                 ? `Created and indexed: ${data.createdPosts.map(p => `<strong>${p.title}</strong> (${p.category})`).join(', ')}`
-                : 'All feeds up to date. Latest 3 posts per category maintained in D1.'}
+                : 'All feeds up to date. Latest posts maintained in D1.'}
             </div>
           `;
           setTimeout(() => window.location.reload(), 2000);
@@ -565,90 +1071,72 @@ const logs = await getIndexLogs();
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer hollywoodtime_secret_key_2026'
           },
           body: JSON.stringify({
             title,
             category,
             featuredImage,
+            authorName,
             excerpt,
             content,
-            authorName,
-            serviceAccountJson: inputSa?.value || undefined
-          })
-        });
-
-        const data = await res.json();
-        manualAlert?.classList.remove('hidden');
-
-        if (data.success) {
-          manualAlert.className = 'mt-4 p-3.5 rounded-lg text-xs font-medium bg-emerald-50 border border-emerald-300 text-emerald-900';
-          manualAlert.innerHTML = `<strong>✓ Story Published Successfully!</strong> Saved to D1 SQLite database. <a href="${data.url}" target="_blank" class="underline font-bold ml-1">View Story ↗</a>`;
-          formManual.reset();
-          setTimeout(() => window.location.reload(), 2000);
-        } else {
-          manualAlert.className = 'mt-4 p-3.5 rounded-lg text-xs font-medium bg-red-50 border border-red-300 text-red-900';
-          manualAlert.textContent = `Publishing Error: ${data.error || 'Failed to save to D1.'}`;
-        }
-      } catch (err) {
-        manualAlert?.classList.remove('hidden');
-        manualAlert.className = 'mt-4 p-3.5 rounded-lg text-xs font-medium bg-red-50 border border-red-300 text-red-900';
-        manualAlert.textContent = `Network Error: ${err.message}`;
-      } finally {
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Publish Live to Cloudflare D1 →';
-        }
-      }
-    });
-
-    // Single URL Indexing Form
-    formIndex?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const url = inputUrl?.value;
-      if (!url) return;
-
-      if (inputSa?.value) {
-        localStorage.setItem('ht_service_account', inputSa.value);
-      }
-
-      try {
-        const res = await fetch('/api/index-url', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url,
-            serviceAccountJson: inputSa?.value || undefined,
           }),
         });
 
         const data = await res.json();
-        alert(`Google Indexing Response: ${data.message || JSON.stringify(data)}`);
-        window.location.reload();
+        if (manualAlert) manualAlert.classList.remove('hidden');
+
+        if (data.success) {
+          manualAlert.className = 'mb-4 p-4 rounded-xl border text-xs bg-emerald-50 border-emerald-300 text-emerald-900';
+          manualAlert.innerHTML = `
+            <strong>✓ Story Published Successfully!</strong> Saved to Cloudflare D1 SQLite.
+            <div class="mt-1">
+              <a href="${data.url}" target="_blank" class="font-bold underline text-hollywood-red">
+                View Live Story (${data.slug}) ↗
+              </a>
+            </div>
+          `;
+          formManual.reset();
+          setTimeout(() => window.location.reload(), 2000);
+        } else {
+          manualAlert.className = 'mb-4 p-4 rounded-xl border text-xs bg-red-50 border-red-300 text-red-900';
+          manualAlert.textContent = `Publish Error: ${data.error || 'Failed to save story.'}`;
+        }
       } catch (err) {
-        alert(`Submission Error: ${err.message}`);
+        if (manualAlert) {
+          manualAlert.classList.remove('hidden');
+          manualAlert.className = 'mb-4 p-4 rounded-xl border text-xs bg-red-50 border-red-300 text-red-900';
+          manualAlert.textContent = `Network / Publish Error: ${err.message}`;
+        }
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '🚀 Publish Story to Live Site & Ping Google';
+        }
       }
     });
 
-    // AI Fetch Client Handlers
-    const inputAi = document.getElementById('ai-fetch-input');
-    const selectAiCat = document.getElementById('ai-fetch-category');
-    const btnAiFill = document.getElementById('btn-ai-fill');
-    const btnAiAutoPub = document.getElementById('btn-ai-autopublish');
-    const spinnerAiFill = document.getElementById('spinner-ai-fill');
-    const spinnerAiPub = document.getElementById('spinner-ai-pub');
+    // ==========================================
+    // 3. AI NEWS FETCH & REWRITER ENGINE
+    // ==========================================
+    const btnAiFill = document.getElementById('btn-ai-fetch-fill');
+    const btnAiAutoPub = document.getElementById('btn-ai-fetch-publish');
+    const aiInput = document.getElementById('ai-fetch-input');
+    const aiCategory = document.getElementById('ai-fetch-category');
+    const aiHint = document.getElementById('ai-fetch-hint');
     const aiAlert = document.getElementById('ai-fetch-alert');
+    const aiFillSpinner = document.getElementById('ai-fill-spinner');
+    const aiPubSpinner = document.getElementById('ai-pub-spinner');
 
-    async function handleAiFetch(autoPublish) {
-      const source = inputAi?.value?.trim();
-      if (!source) {
-        alert('Please enter a news URL or breaking news topic to fetch.');
-        inputAi?.focus();
+    async function handleAiFetch(autoPublish = false) {
+      const urlOrTopic = aiInput?.value?.trim();
+      if (!urlOrTopic) {
+        alert('Please enter a news URL or a breaking topic prompt.');
+        aiInput?.focus();
         return;
       }
 
       const activeBtn = autoPublish ? btnAiAutoPub : btnAiFill;
-      const activeSpinner = autoPublish ? spinnerAiPub : spinnerAiFill;
+      const activeSpinner = autoPublish ? aiPubSpinner : aiFillSpinner;
 
       if (activeBtn) activeBtn.disabled = true;
       if (activeSpinner) activeSpinner.classList.remove('hidden');
@@ -657,16 +1145,13 @@ const logs = await getIndexLogs();
       try {
         const res = await fetch('/api/ai-fetch', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer hollywoodtime_secret_key_2026'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            source,
-            category: selectAiCat?.value || undefined,
-            autoPublish: Boolean(autoPublish),
-            serviceAccountJson: inputSa?.value || undefined
-          })
+            urlOrTopic,
+            categoryOverride: aiCategory?.value || undefined,
+            angleHint: aiHint?.value?.trim() || undefined,
+            autoPublish,
+          }),
         });
 
         const data = await res.json();
@@ -678,7 +1163,6 @@ const logs = await getIndexLogs();
             aiAlert.innerHTML = `<strong>✓ AI Fetch & Publish Success!</strong> Live in D1 & submitted to Google. <a href="${data.url}" target="_blank" class="underline font-bold text-white ml-1">View Live Story ↗</a>`;
             setTimeout(() => window.location.reload(), 2000);
           } else {
-            // Populate form below
             const p = data.post;
             const titleInput = document.getElementById('post-title');
             const catSelect = document.getElementById('post-category');
@@ -696,8 +1180,6 @@ const logs = await getIndexLogs();
 
             aiAlert.className = 'p-4 rounded-xl border text-xs bg-emerald-950/80 border-emerald-500/50 text-emerald-200';
             aiAlert.innerHTML = `<strong>✓ AI Fetch Complete!</strong> Story populated into the form below. Review or edit, then click Publish.`;
-
-            // Smooth scroll to form
             document.getElementById('manual-publish-section')?.scrollIntoView({ behavior: 'smooth' });
           }
         } else {
